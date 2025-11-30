@@ -1,0 +1,18 @@
+# S&L Cold Storage - Warehouse Monitoring Dashboard
+# Requirements for Streamlit + Azure IoT Hub integration
+
+# Core Streamlit
+streamlit>=1.28.0
+
+# Data handling
+pandas>=2.0.0
+numpy>=1.24.0
+
+# Visualization
+plotly>=5.18.0
+
+# Azure IoT Hub / Event Hub connection
+azure-eventhub>=5.11.0
+
+# Environment variable management
+python-dotenv>=1.0.0
