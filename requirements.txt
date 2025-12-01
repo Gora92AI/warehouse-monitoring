@@ -7,6 +7,7 @@ streamlit>=1.28.0
 # Data handling
 pandas>=2.0.0
 numpy>=1.24.0
+azure-data-tables>=12.4.0
 
 # Visualization
 plotly>=5.18.0
