@@ -1,6 +1,3 @@
-Dashboard both stations · PY
-Copy
-
 """
 S&L Cold Storage - Warehouse Monitoring Dashboard
 Real-time ethylene, temperature, and humidity monitoring
