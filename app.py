@@ -1,3 +1,6 @@
+Dashboard both stations · PY
+Copy
+
 """
 S&L Cold Storage - Warehouse Monitoring Dashboard
 Real-time ethylene, temperature, and humidity monitoring
@@ -466,11 +469,11 @@ eth1 = 0.0 if eth1_raw is None or pd.isna(eth1_raw) else float(eth1_raw)
 
 g1, g2, g3 = st.columns(3)
 with g1:
-    st.plotly_chart(create_gauge_chart(temp_f_s1, "Temperature", 0, 100, [32, 50, 70], "°F"), use_container_width=True)
+    st.plotly_chart(create_gauge_chart(temp_f_s1, "Temperature", 0, 100, [32, 50, 70], "°F"), use_container_width=True, key="gauge_s1_temp")
 with g2:
-    st.plotly_chart(create_gauge_chart(humidity_s1, "Humidity", 0, 100, [30, 60, 80], "%"), use_container_width=True)
+    st.plotly_chart(create_gauge_chart(humidity_s1, "Humidity", 0, 100, [30, 60, 80], "%"), use_container_width=True, key="gauge_s1_hum")
 with g3:
-    st.plotly_chart(create_gauge_chart(eth1, "Ethylene", 0, 15, [1, 5, 10], " ppm"), use_container_width=True)
+    st.plotly_chart(create_gauge_chart(eth1, "Ethylene", 0, 15, [1, 5, 10], " ppm"), use_container_width=True, key="gauge_s1_eth")
 
 # Station 2 gauges
 st.markdown("### 🏭 Station 2")
@@ -481,11 +484,11 @@ eth2 = 0.0 if eth2_raw is None or pd.isna(eth2_raw) else float(eth2_raw)
 
 g4, g5, g6 = st.columns(3)
 with g4:
-    st.plotly_chart(create_gauge_chart(temp_f_s2, "Temperature", 0, 100, [32, 50, 70], "°F"), use_container_width=True)
+    st.plotly_chart(create_gauge_chart(temp_f_s2, "Temperature", 0, 100, [32, 50, 70], "°F"), use_container_width=True, key="gauge_s2_temp")
 with g5:
-    st.plotly_chart(create_gauge_chart(humidity_s2, "Humidity", 0, 100, [30, 60, 80], "%"), use_container_width=True)
+    st.plotly_chart(create_gauge_chart(humidity_s2, "Humidity", 0, 100, [30, 60, 80], "%"), use_container_width=True, key="gauge_s2_hum")
 with g6:
-    st.plotly_chart(create_gauge_chart(eth2, "Ethylene", 0, 15, [1, 5, 10], " ppm"), use_container_width=True)
+    st.plotly_chart(create_gauge_chart(eth2, "Ethylene", 0, 15, [1, 5, 10], " ppm"), use_container_width=True, key="gauge_s2_eth")
 
 st.markdown("---")
 
@@ -500,7 +503,7 @@ if not df.empty:
         fig = create_multi_station_chart(eth_df, 'ethylene', 'Ethylene Comparison', 'ppm')
         fig.add_hline(y=5.0, line_dash="dash", line_color="#ffaa00", annotation_text="Warning")
         fig.add_hline(y=10.0, line_dash="dash", line_color="#ff4444", annotation_text="Critical")
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, use_container_width=True, key="chart_ethylene_history")
     
     # Temperature comparison (both stations)
     st.markdown("### 🌡️ Temperature - Both Stations")
@@ -508,14 +511,14 @@ if not df.empty:
     if not temp_df.empty:
         temp_df['temp_f'] = temp_df['temperature'].apply(celsius_to_fahrenheit)
         fig = create_multi_station_chart(temp_df, 'temp_f', 'Temperature Comparison', '°F')
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, use_container_width=True, key="chart_temp_history")
     
     # Humidity comparison (both stations)
     st.markdown("### 💧 Humidity - Both Stations")
     hum_df = df[df['humidity'].notna()].copy()
     if not hum_df.empty:
         fig = create_multi_station_chart(hum_df, 'humidity', 'Humidity Comparison', '%')
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, use_container_width=True, key="chart_humidity_history")
 
 st.markdown("---")
 
@@ -565,4 +568,3 @@ st.markdown("""
 if auto_refresh:
     time.sleep(refresh_interval)
     st.rerun()
-    
