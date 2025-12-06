@@ -2,7 +2,7 @@
 S&L Cold Storage - Warehouse Monitoring Dashboard
 Real-time ethylene, temperature, and humidity monitoring
 
-Reads sensor data from Azure Table Storage
+UPDATED: Both Station 1 and Station 2 with full sensor suites
 """
 
 import streamlit as st
@@ -256,8 +256,8 @@ def generate_demo_data():
         data.append({
             'station': 'station2',
             'timestamp': timestamp,
-            'temperature': None,
-            'humidity': None,
+            'temperature': 21.5 + random.uniform(-1, 1),
+            'humidity': 52.0 + random.uniform(-3, 3),
             'ethylene': 0.8 + random.uniform(-0.2, 0.3)
         })
     
@@ -418,25 +418,37 @@ with col1:
 
 with col2:
     st.markdown("### 🏭 Station 2")
-    st.caption("Ethylene Monitoring")
+    st.caption("Full Sensor Suite")
     
     if latest_station2:
+        temp_c = latest_station2.get('temperature')
+        temp_f = celsius_to_fahrenheit(temp_c) if temp_c else None
+        humidity = latest_station2.get('humidity')
         ethylene = latest_station2.get('ethylene')
         
         # Clean ethylene data
         if pd.isna(ethylene) or ethylene is None:
             ethylene = 0.0
         
-        # Center the ethylene metric
-        col_left, col_center, col_right = st.columns([1, 2, 1])
-        with col_center:
+        m1, m2, m3 = st.columns(3)
+        with m1:
+            temp_status, temp_color = get_temp_status(temp_f)
+            st.metric("🌡️ Room Temp", f"{temp_f:.1f}°F" if temp_f else "N/A", f"{temp_c:.1f}°C" if temp_c else None)
+            if temp_f:
+                st.markdown(f"<small style='color:{temp_color}'>{temp_status}</small>", unsafe_allow_html=True)
+        with m2:
+            if humidity is not None:
+                st.metric("💧 Humidity", f"{humidity:.1f}%")
+            else:
+                st.metric("💧 Humidity", "N/A")
+        with m3:
             eth_status, eth_color = get_ethylene_status(ethylene)
             if ethylene is not None and not pd.isna(ethylene):
-                st.metric("🍃 Ethylene", f"{ethylene:.2f} ppm", label_visibility="visible")
-                st.markdown(f"<div style='text-align:center'><small style='color:{eth_color}'>{eth_status}</small></div>", unsafe_allow_html=True)
+                st.metric("🍃 Ethylene", f"{ethylene:.2f} ppm")
+                st.markdown(f"<small style='color:{eth_color}'>{eth_status}</small>", unsafe_allow_html=True)
             else:
-                st.metric("🍃 Ethylene", "0.00 ppm", label_visibility="visible")
-                st.markdown(f"<div style='text-align:center'><small style='color:#00b4d8'>Low</small></div>", unsafe_allow_html=True)
+                st.metric("🍃 Ethylene", "0.00 ppm")
+                st.markdown(f"<small style='color:#00b4d8'>Low</small>", unsafe_allow_html=True)
     else:
         st.info("Waiting for data from Station 2...")
 
@@ -445,26 +457,35 @@ st.markdown("---")
 # Gauge Charts
 st.markdown("## 📊 Real-Time Gauges")
 
-# Clean gauge data
-temp_f = celsius_to_fahrenheit(latest_station1.get('temperature')) if latest_station1 and latest_station1.get('temperature') else 0
-humidity = latest_station1.get('humidity') if latest_station1 and latest_station1.get('humidity') else 0
-
+# Station 1 gauges
+st.markdown("### 🏭 Station 1")
+temp_f_s1 = celsius_to_fahrenheit(latest_station1.get('temperature')) if latest_station1 and latest_station1.get('temperature') else 0
+humidity_s1 = latest_station1.get('humidity') if latest_station1 and latest_station1.get('humidity') else 0
 eth1_raw = latest_station1.get('ethylene') if latest_station1 else None
 eth1 = 0.0 if eth1_raw is None or pd.isna(eth1_raw) else float(eth1_raw)
 
+g1, g2, g3 = st.columns(3)
+with g1:
+    st.plotly_chart(create_gauge_chart(temp_f_s1, "Temperature", 0, 100, [32, 50, 70], "°F"), use_container_width=True)
+with g2:
+    st.plotly_chart(create_gauge_chart(humidity_s1, "Humidity", 0, 100, [30, 60, 80], "%"), use_container_width=True)
+with g3:
+    st.plotly_chart(create_gauge_chart(eth1, "Ethylene", 0, 15, [1, 5, 10], " ppm"), use_container_width=True)
+
+# Station 2 gauges
+st.markdown("### 🏭 Station 2")
+temp_f_s2 = celsius_to_fahrenheit(latest_station2.get('temperature')) if latest_station2 and latest_station2.get('temperature') else 0
+humidity_s2 = latest_station2.get('humidity') if latest_station2 and latest_station2.get('humidity') else 0
 eth2_raw = latest_station2.get('ethylene') if latest_station2 else None
 eth2 = 0.0 if eth2_raw is None or pd.isna(eth2_raw) else float(eth2_raw)
 
-g1, g2, g3, g4 = st.columns(4)
-
-with g1:
-    st.plotly_chart(create_gauge_chart(temp_f, "Room Temp", 0, 100, [32, 50, 70], "°F"), use_container_width=True)
-with g2:
-    st.plotly_chart(create_gauge_chart(humidity, "Humidity", 0, 100, [30, 60, 80], "%"), use_container_width=True)
-with g3:
-    st.plotly_chart(create_gauge_chart(eth1, "Ethylene (S1)", 0, 15, [1, 5, 10], " ppm"), use_container_width=True)
+g4, g5, g6 = st.columns(3)
 with g4:
-    st.plotly_chart(create_gauge_chart(eth2, "Ethylene (S2)", 0, 15, [1, 5, 10], " ppm"), use_container_width=True)
+    st.plotly_chart(create_gauge_chart(temp_f_s2, "Temperature", 0, 100, [32, 50, 70], "°F"), use_container_width=True)
+with g5:
+    st.plotly_chart(create_gauge_chart(humidity_s2, "Humidity", 0, 100, [30, 60, 80], "%"), use_container_width=True)
+with g6:
+    st.plotly_chart(create_gauge_chart(eth2, "Ethylene", 0, 15, [1, 5, 10], " ppm"), use_container_width=True)
 
 st.markdown("---")
 
@@ -473,35 +494,28 @@ st.markdown("## 📈 Historical Trends")
 
 if not df.empty:
     # Ethylene chart (both stations)
-    st.markdown("### 🍃 Ethylene Levels")
+    st.markdown("### 🍃 Ethylene Levels - Both Stations")
     eth_df = df[df['ethylene'].notna()].copy()
     if not eth_df.empty:
-        fig = create_multi_station_chart(eth_df, 'ethylene', 'Ethylene by Station', 'ppm')
+        fig = create_multi_station_chart(eth_df, 'ethylene', 'Ethylene Comparison', 'ppm')
         fig.add_hline(y=5.0, line_dash="dash", line_color="#ffaa00", annotation_text="Warning")
         fig.add_hline(y=10.0, line_dash="dash", line_color="#ff4444", annotation_text="Critical")
         st.plotly_chart(fig, use_container_width=True)
     
-    # Temperature and Humidity (Station 1 only)
-    c1, c2 = st.columns(2)
-    df_s1 = df[df['station'].str.contains('station1|raspberry', case=False, na=False)]
+    # Temperature comparison (both stations)
+    st.markdown("### 🌡️ Temperature - Both Stations")
+    temp_df = df[df['temperature'].notna()].copy()
+    if not temp_df.empty:
+        temp_df['temp_f'] = temp_df['temperature'].apply(celsius_to_fahrenheit)
+        fig = create_multi_station_chart(temp_df, 'temp_f', 'Temperature Comparison', '°F')
+        st.plotly_chart(fig, use_container_width=True)
     
-    with c1:
-        st.markdown("### 🌡️ Temperature")
-        if not df_s1.empty and df_s1['temperature'].notna().any():
-            df_temp = df_s1.copy()
-            df_temp['temp_f'] = df_temp['temperature'].apply(celsius_to_fahrenheit)
-            fig = create_time_series_chart(df_temp, 'temp_f', 'Temperature (Station 1)', '#00b4d8', '°F')
-            st.plotly_chart(fig, use_container_width=True)
-        else:
-            st.info("No temperature data available")
-    
-    with c2:
-        st.markdown("### 💧 Humidity")
-        if not df_s1.empty and df_s1['humidity'].notna().any():
-            fig = create_time_series_chart(df_s1, 'humidity', 'Humidity (Station 1)', '#90e0ef', '%')
-            st.plotly_chart(fig, use_container_width=True)
-        else:
-            st.info("No humidity data available")
+    # Humidity comparison (both stations)
+    st.markdown("### 💧 Humidity - Both Stations")
+    hum_df = df[df['humidity'].notna()].copy()
+    if not hum_df.empty:
+        fig = create_multi_station_chart(hum_df, 'humidity', 'Humidity Comparison', '%')
+        st.plotly_chart(fig, use_container_width=True)
 
 st.markdown("---")
 
@@ -520,6 +534,9 @@ if latest_station1:
         alerts.append(("warning", f"Station 1 Ethylene: {eth:.2f} ppm elevated"))
 
 if latest_station2:
+    temp_f = celsius_to_fahrenheit(latest_station2.get('temperature'))
+    if temp_f and (temp_f < 25 or temp_f > 45):
+        alerts.append(("critical", f"Station 2 Temperature: {temp_f:.1f}°F out of range!"))
     eth = latest_station2.get('ethylene')
     if eth and eth > 10:
         alerts.append(("critical", f"Station 2 Ethylene: {eth:.2f} ppm CRITICAL!"))
@@ -538,8 +555,9 @@ else:
 st.markdown("---")
 st.markdown("""
 <div class="footer">
-    <p><strong>S&L Cold Storage</strong> - Warehouse Monitoring System v2.0</p>
+    <p><strong>S&L Cold Storage</strong> - Warehouse Monitoring System v2.1</p>
     <p>Powered by Azure Table Storage | Built with Streamlit</p>
+    <p>Station 1 & Station 2 - Full Sensor Suites</p>
 </div>
 """, unsafe_allow_html=True)
 
@@ -547,3 +565,4 @@ st.markdown("""
 if auto_refresh:
     time.sleep(refresh_interval)
     st.rerun()
+    
