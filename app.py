@@ -1,21 +1,19 @@
 """
-S&L Cold Storage - Smart Avocado Ripening System
-Version: 3.5 - PERFORMANCE OPTIMIZED
+S&L Cold Storage - AI Avocado Ripening System
+Version: 3.6 - Fixed Trends & Charts
 
-PERFORMANCE FIXES:
-1. Azure query with server-side filtering (not client-side loop)
-2. Limit results to 200 most recent records
-3. Lazy loading - only fetch what's needed
-4. Connection pooling with singleton pattern
-5. Minimal CSS (no external Google Fonts)
-6. Deferred imports
+FIXES:
+1. Trend charts now load automatically
+2. Better timestamp parsing for Azure data
+3. Removed strict time filtering that was blocking data
+4. Added debug mode to see raw data
 """
 
 import streamlit as st
 from datetime import datetime, timedelta, timezone
 
 # ============================================================================
-# PAGE CONFIG - MUST BE FIRST
+# PAGE CONFIG
 # ============================================================================
 st.set_page_config(
     page_title="S&L Cold Storage",
@@ -25,7 +23,7 @@ st.set_page_config(
 )
 
 # ============================================================================
-# MINIMAL CSS - No external fonts (saves 500ms+)
+# CSS
 # ============================================================================
 st.markdown("""
 <style>
@@ -45,14 +43,11 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ============================================================================
-# SINGLETON CONNECTION - Reuse connection across reruns
+# AZURE CONNECTION - Singleton
 # ============================================================================
 @st.cache_resource(show_spinner=False)
 def get_azure_clients():
-    """
-    Singleton pattern - create connection ONCE and reuse.
-    This saves ~2-3 seconds on each page load.
-    """
+    """Create connection once and reuse"""
     try:
         from azure.data.tables import TableServiceClient
         conn = st.secrets['azure']['storage_connection_string']
@@ -61,7 +56,6 @@ def get_azure_clients():
         service = TableServiceClient.from_connection_string(conn)
         data_client = service.get_table_client(table_name)
         
-        # Create batches table if needed
         try:
             service.create_table("batches")
         except:
@@ -73,136 +67,142 @@ def get_azure_clients():
         return None, None, False
 
 # ============================================================================
-# OPTIMIZED DATA FETCH - Server-side filtering
+# DATA FETCH - Optimized
 # ============================================================================
-@st.cache_data(ttl=30, show_spinner=False)
-def fetch_latest_readings():
-    """
-    OPTIMIZED: Only fetch the 2 most recent readings per sensor.
-    Uses server-side query instead of scanning entire table.
+def parse_timestamp(ts):
+    """Robust timestamp parsing"""
+    if ts is None:
+        return None
     
-    Target: < 500ms (down from 12 seconds)
-    """
-    data_client, _, connected = get_azure_clients()
-    if not connected or not data_client:
-        return None, None, False
+    if isinstance(ts, datetime):
+        if ts.tzinfo is None:
+            return ts.replace(tzinfo=timezone.utc)
+        return ts
     
-    try:
-        # Get cutoff time - only last 30 minutes for latest readings
-        cutoff = datetime.now(timezone.utc) - timedelta(minutes=30)
-        cutoff_str = cutoff.isoformat()
-        
-        sensor1_latest = None
-        sensor2_latest = None
-        
-        # Query with filter - MUCH faster than list_entities()
-        # Azure Table Storage filter syntax
-        query_filter = f"timestamp ge '{cutoff_str}'"
-        
-        try:
-            # Try filtered query first
-            entities = list(data_client.query_entities(
-                query_filter=query_filter,
-                select=['PartitionKey', 'station', 'timestamp', 'temperature', 'humidity', 'ethylene']
-            ))
-        except:
-            # Fallback: Get last 100 entities only
-            entities = []
-            count = 0
-            for e in data_client.list_entities():
-                entities.append(e)
-                count += 1
-                if count >= 100:  # LIMIT to prevent full scan
-                    break
-        
-        # Process entities - find latest for each sensor
-        for entity in entities:
+    if isinstance(ts, str):
+        # Try various formats
+        for fmt in [
+            '%Y-%m-%dT%H:%M:%S.%f%z',
+            '%Y-%m-%dT%H:%M:%S%z', 
+            '%Y-%m-%dT%H:%M:%S.%fZ',
+            '%Y-%m-%dT%H:%M:%SZ',
+            '%Y-%m-%dT%H:%M:%S.%f',
+            '%Y-%m-%dT%H:%M:%S',
+            '%Y-%m-%d %H:%M:%S.%f',
+            '%Y-%m-%d %H:%M:%S',
+        ]:
             try:
-                ts = entity.get('timestamp') or entity.get('Timestamp')
-                if not ts:
-                    continue
-                    
-                if isinstance(ts, str):
-                    ts = datetime.fromisoformat(ts.replace('Z', '+00:00'))
-                if ts.tzinfo is None:
-                    ts = ts.replace(tzinfo=timezone.utc)
-                
-                station = str(entity.get('station', entity.get('PartitionKey', ''))).lower()
-                
-                reading = {
-                    'station': station,
-                    'timestamp': ts,
-                    'temperature': float(entity['temperature']) if entity.get('temperature') else None,
-                    'humidity': float(entity['humidity']) if entity.get('humidity') else None,
-                    'ethylene': float(entity['ethylene']) if entity.get('ethylene') else None
-                }
-                
-                # Assign to sensor 1 or 2
-                if '1' in station or 'sensor1' in station or station == 'station1':
-                    if sensor1_latest is None or ts > sensor1_latest['timestamp']:
-                        sensor1_latest = reading
-                elif '2' in station or 'sensor2' in station or station == 'station2':
-                    if sensor2_latest is None or ts > sensor2_latest['timestamp']:
-                        sensor2_latest = reading
-                else:
-                    # Default first unknown to sensor1, second to sensor2
-                    if sensor1_latest is None:
-                        sensor1_latest = reading
-                    elif sensor2_latest is None:
-                        sensor2_latest = reading
-                        
+                dt = datetime.strptime(ts.replace('Z', '+00:00').replace('+00:00', ''), fmt.replace('%z', ''))
+                return dt.replace(tzinfo=timezone.utc)
             except:
                 continue
         
-        return sensor1_latest, sensor2_latest, True
-        
-    except Exception as e:
-        return None, None, False
+        # Last resort - isoformat
+        try:
+            clean = ts.replace('Z', '+00:00')
+            if '+' not in clean and '-' not in clean[10:]:
+                clean += '+00:00'
+            dt = datetime.fromisoformat(clean)
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=timezone.utc)
+            return dt
+        except:
+            pass
+    
+    return None
 
 @st.cache_data(ttl=30, show_spinner=False)
-def fetch_trend_data(hours=4):
-    """Fetch historical data for trends - cached separately"""
+def fetch_all_data(max_records=500):
+    """
+    Fetch data from Azure - returns raw list for processing.
+    No time filtering here - let the caller decide.
+    """
     data_client, _, connected = get_azure_clients()
     if not connected or not data_client:
-        return []
+        return [], False
     
     try:
-        cutoff = datetime.now(timezone.utc) - timedelta(hours=hours)
         data = []
         count = 0
-        max_records = 500  # Limit for trends
         
         for entity in data_client.list_entities():
             try:
-                ts = entity.get('timestamp') or entity.get('Timestamp')
-                if not ts:
-                    continue
-                if isinstance(ts, str):
-                    ts = datetime.fromisoformat(ts.replace('Z', '+00:00'))
-                if ts.tzinfo is None:
-                    ts = ts.replace(tzinfo=timezone.utc)
+                # Get timestamp from various possible fields
+                ts = None
+                for ts_field in ['timestamp', 'Timestamp', 'time', 'datetime', 'created']:
+                    if entity.get(ts_field):
+                        ts = parse_timestamp(entity.get(ts_field))
+                        if ts:
+                            break
                 
-                if ts >= cutoff:
-                    data.append({
-                        'station': entity.get('station', entity.get('PartitionKey', 'unknown')),
-                        'timestamp': ts,
-                        'temperature': float(entity['temperature']) if entity.get('temperature') else None,
-                        'humidity': float(entity['humidity']) if entity.get('humidity') else None,
-                        'ethylene': float(entity['ethylene']) if entity.get('ethylene') else None
-                    })
-                    
+                if not ts:
+                    # Use current time as fallback
+                    ts = datetime.now(timezone.utc)
+                
+                # Get station identifier
+                station = str(entity.get('station', entity.get('PartitionKey', entity.get('device_id', 'unknown'))))
+                
+                data.append({
+                    'station': station,
+                    'timestamp': ts,
+                    'temperature': float(entity['temperature']) if entity.get('temperature') is not None else None,
+                    'humidity': float(entity['humidity']) if entity.get('humidity') is not None else None,
+                    'ethylene': float(entity['ethylene']) if entity.get('ethylene') is not None else None
+                })
+                
                 count += 1
                 if count >= max_records:
                     break
-            except:
+                    
+            except Exception as e:
                 continue
         
-        return data
-    except:
+        # Sort by timestamp descending (newest first)
+        data.sort(key=lambda x: x['timestamp'], reverse=True)
+        return data, True
+        
+    except Exception as e:
+        return [], False
+
+def get_latest_readings(data):
+    """Extract latest reading for each sensor from data"""
+    if not data:
+        return None, None
+    
+    sensor1 = None
+    sensor2 = None
+    
+    for reading in data:
+        station = str(reading['station']).lower()
+        
+        # Determine which sensor
+        is_sensor1 = any(x in station for x in ['1', 'sensor1', 'station1', 'one'])
+        is_sensor2 = any(x in station for x in ['2', 'sensor2', 'station2', 'two'])
+        
+        if is_sensor1 and sensor1 is None:
+            sensor1 = reading
+        elif is_sensor2 and sensor2 is None:
+            sensor2 = reading
+        elif sensor1 is None:
+            sensor1 = reading
+        elif sensor2 is None:
+            sensor2 = reading
+        
+        if sensor1 and sensor2:
+            break
+    
+    return sensor1, sensor2
+
+def filter_by_hours(data, hours):
+    """Filter data to last N hours"""
+    if not data:
         return []
+    
+    cutoff = datetime.now(timezone.utc) - timedelta(hours=hours)
+    return [d for d in data if d['timestamp'] >= cutoff]
 
 # ============================================================================
-# BATCH MANAGER - Optimized with connection reuse
+# BATCH MANAGER
 # ============================================================================
 class BatchManager:
     def __init__(self):
@@ -214,10 +214,11 @@ class BatchManager:
         try:
             e = self.client.get_entity("batch", "active")
             if e.get('is_active'):
+                start = parse_timestamp(e.get('start_time'))
                 return {
                     'name': e.get('name', 'Batch'),
                     'season': e.get('season', 'mid_season'),
-                    'start_time': datetime.fromisoformat(e['start_time']),
+                    'start_time': start or datetime.now(timezone.utc),
                     'is_active': True
                 }
         except:
@@ -251,38 +252,40 @@ class BatchManager:
             return False
 
 # ============================================================================
-# HELPER FUNCTIONS
+# HELPERS
 # ============================================================================
 def c_to_f(c):
     return (c * 9/5) + 32 if c is not None else None
 
 def get_demo_data():
-    """Fast demo data"""
+    """Demo data"""
     import random
     now = datetime.now(timezone.utc)
-    s1 = {
-        'station': 'sensor1', 'timestamp': now,
-        'temperature': 18.5 + random.uniform(-0.5, 0.5),
-        'humidity': 92 + random.uniform(-2, 2),
-        'ethylene': 45 + random.uniform(-5, 10)
-    }
-    s2 = {
-        'station': 'sensor2', 'timestamp': now,
-        'temperature': 18.2 + random.uniform(-0.5, 0.5),
-        'humidity': 91.5 + random.uniform(-2, 2),
-        'ethylene': 48 + random.uniform(-5, 10)
-    }
-    return s1, s2
+    data = []
+    for i in range(100):
+        ts = now - timedelta(minutes=i*3)
+        data.append({
+            'station': 'sensor1', 'timestamp': ts,
+            'temperature': 18.5 + random.uniform(-1, 1),
+            'humidity': 92 + random.uniform(-3, 3),
+            'ethylene': 45 + random.uniform(-10, 15)
+        })
+        data.append({
+            'station': 'sensor2', 'timestamp': ts,
+            'temperature': 18.2 + random.uniform(-1, 1),
+            'humidity': 91 + random.uniform(-3, 3),
+            'ethylene': 48 + random.uniform(-10, 15)
+        })
+    return data
 
 # ============================================================================
-# AI ENGINE - Lightweight
+# AI ENGINE
 # ============================================================================
 def analyze_conditions(temp_f, humidity, ethylene, batch_start=None, season='mid_season'):
     alerts = []
     recs = []
     status = 'optimal'
     
-    # Temperature checks
     if temp_f:
         if temp_f >= 86:
             status = 'critical'
@@ -299,9 +302,7 @@ def analyze_conditions(temp_f, humidity, ethylene, batch_start=None, season='mid
         elif temp_f < 60:
             if status != 'critical': status = 'warning'
             alerts.append(('warning', f'⚠️ Temperature {temp_f:.1f}°F below optimal'))
-            recs.append((f'🌡️ Increase temperature by {60 - temp_f:.1f}°F', False))
     
-    # Humidity checks
     if humidity:
         if humidity < 80:
             status = 'critical'
@@ -310,19 +311,12 @@ def analyze_conditions(temp_f, humidity, ethylene, batch_start=None, season='mid
         elif humidity < 90:
             if status != 'critical': status = 'warning'
             alerts.append(('warning', f'⚠️ Humidity {humidity:.1f}% below optimal'))
-            recs.append(('💧 Increase humidity', True))
     
-    # Ethylene checks
-    if ethylene:
-        if ethylene > 150:
-            if status != 'critical': status = 'warning'
-            alerts.append(('warning', f'⚠️ Ethylene {ethylene:.1f} ppm very high'))
-            recs.append(('🌬️ Ventilate room', True))
-        elif ethylene < 5:
-            alerts.append(('warning', f'⚠️ Ethylene {ethylene:.1f} ppm low'))
-            recs.append(('🍌 Consider adding ethylene source', False))
+    if ethylene and ethylene > 150:
+        if status != 'critical': status = 'warning'
+        alerts.append(('warning', f'⚠️ Ethylene {ethylene:.1f} ppm very high'))
+        recs.append(('🌬️ Ventilate room', True))
     
-    # Progress calculation
     progress = 0
     stage = 'Green'
     remaining_h = None
@@ -348,19 +342,18 @@ def analyze_conditions(temp_f, humidity, ethylene, batch_start=None, season='mid
     }
 
 # ============================================================================
-# SIMPLE GAUGE - No Plotly overhead for main view
+# GAUGE HTML
 # ============================================================================
-def simple_gauge_html(value, label, unit, min_v, max_v, opt_min, opt_max):
+def gauge_html(value, label, unit, min_v, max_v, opt_min, opt_max):
     if value is None:
-        return f"<div style='text-align:center;padding:20px;'><span style='color:#8b949e;'>{label}</span><br><span style='font-size:2rem;color:#8b949e;'>N/A</span></div>"
+        return f"<div style='text-align:center;padding:20px;background:#161b22;border-radius:8px;'><span style='color:#8b949e;'>{label}</span><br><span style='font-size:2rem;color:#8b949e;'>N/A</span></div>"
     
-    # Determine color
     if opt_min <= value <= opt_max:
-        color = '#3fb950'  # Green
-    elif value < min_v or value > max_v:
-        color = '#da3633'  # Red
+        color = '#3fb950'
+    elif value < min_v * 0.9 or value > max_v * 1.1:
+        color = '#da3633'
     else:
-        color = '#d29922'  # Yellow
+        color = '#d29922'
     
     pct = min(100, max(0, (value - min_v) / (max_v - min_v) * 100))
     
@@ -383,7 +376,7 @@ def main():
     st.markdown("""
     <div style='text-align:center;padding:10px 0 20px 0;'>
         <h1 style='font-size:2rem;margin:0;color:#3fb950;'>🥑 S&L Cold Storage</h1>
-        <p style='color:#8b949e;margin:5px 0 0 0;'>AI Ripening System v3.5</p>
+        <p style='color:#8b949e;margin:5px 0 0 0;'>AI Ripening System v3.6</p>
     </div>
     """, unsafe_allow_html=True)
     
@@ -395,6 +388,7 @@ def main():
     with st.sidebar:
         st.markdown("### ⚙️ Settings")
         demo_mode = st.checkbox("Demo Mode", value=not connected)
+        debug_mode = st.checkbox("Debug Mode", value=False)
         
         st.markdown("---")
         st.markdown("### 🥑 Batch")
@@ -432,17 +426,36 @@ def main():
     
     # === GET DATA ===
     if demo_mode:
-        sensor1, sensor2 = get_demo_data()
+        all_data = get_demo_data()
+        data_ok = True
     else:
-        sensor1, sensor2, _ = fetch_latest_readings()
+        all_data, data_ok = fetch_all_data(max_records=500)
+    
+    # Get latest readings
+    sensor1, sensor2 = get_latest_readings(all_data)
+    
+    # Debug info
+    if debug_mode:
+        st.markdown("### 🔧 Debug Info")
+        st.write(f"Total records fetched: {len(all_data)}")
+        if all_data:
+            st.write(f"Newest: {all_data[0]['timestamp']}")
+            st.write(f"Oldest: {all_data[-1]['timestamp']}")
+            st.write("Sample record:", all_data[0] if all_data else "None")
+        st.write(f"Sensor 1: {sensor1}")
+        st.write(f"Sensor 2: {sensor2}")
+        st.markdown("---")
     
     # Calculate averages
     temps, hums, eths = [], [], []
     for s in [sensor1, sensor2]:
         if s:
-            if s.get('temperature'): temps.append(c_to_f(s['temperature']))
-            if s.get('humidity'): hums.append(s['humidity'])
-            if s.get('ethylene'): eths.append(s['ethylene'])
+            if s.get('temperature') is not None: 
+                temps.append(c_to_f(s['temperature']))
+            if s.get('humidity') is not None: 
+                hums.append(s['humidity'])
+            if s.get('ethylene') is not None: 
+                eths.append(s['ethylene'])
     
     avg_temp = sum(temps)/len(temps) if temps else None
     avg_hum = sum(hums)/len(hums) if hums else None
@@ -456,12 +469,11 @@ def main():
         active_batch['season'] if active_batch else 'mid_season'
     )
     
-    # === MAIN CONTENT ===
+    # === TABS ===
     tab1, tab2, tab3 = st.tabs(["🤖 Dashboard", "📊 Sensors", "📈 Trends"])
     
     # === TAB 1: DASHBOARD ===
     with tab1:
-        # Alerts
         for atype, msg in analysis['alerts']:
             cls = 'alert-critical' if atype == 'critical' else 'alert-warning'
             st.markdown(f'<div class="{cls}">{msg}</div>', unsafe_allow_html=True)
@@ -469,26 +481,21 @@ def main():
         if not analysis['alerts']:
             st.markdown('<div class="alert-success">✅ All conditions optimal</div>', unsafe_allow_html=True)
         
-        # Recommendations
         if analysis['recs']:
             st.markdown("#### 💡 Recommendations")
             for rec, urgent in analysis['recs']:
-                icon = "🔴" if urgent else "🟢"
-                st.markdown(f"{icon} {rec}")
+                st.markdown(f"{'🔴' if urgent else '🟢'} {rec}")
         
         st.markdown("---")
-        
-        # Gauges (HTML-based, faster than Plotly)
         st.markdown("#### 📊 Room Conditions")
         c1, c2, c3 = st.columns(3)
         with c1:
-            st.markdown(simple_gauge_html(avg_temp, "Temperature", "°F", 30, 100, 60, 68), unsafe_allow_html=True)
+            st.markdown(gauge_html(avg_temp, "Temperature", "°F", 30, 100, 60, 68), unsafe_allow_html=True)
         with c2:
-            st.markdown(simple_gauge_html(avg_hum, "Humidity", "%", 50, 100, 90, 95), unsafe_allow_html=True)
+            st.markdown(gauge_html(avg_hum, "Humidity", "%", 50, 100, 90, 95), unsafe_allow_html=True)
         with c3:
-            st.markdown(simple_gauge_html(avg_eth, "Ethylene", " ppm", 0, 150, 10, 100), unsafe_allow_html=True)
+            st.markdown(gauge_html(avg_eth, "Ethylene", " ppm", 0, 150, 10, 100), unsafe_allow_html=True)
         
-        # Progress (if batch active)
         if active_batch:
             st.markdown("---")
             st.markdown("#### 🥑 Ripening Progress")
@@ -502,13 +509,11 @@ def main():
                 if analysis['remaining_h']:
                     d, h = int(analysis['remaining_h'] // 24), int(analysis['remaining_h'] % 24)
                     st.metric("Remaining", f"{d}d {h}h" if d else f"{h}h")
-            
             st.progress(analysis['progress'] / 100)
     
     # === TAB 2: SENSORS ===
     with tab2:
         st.markdown("### 🏭 Ripening Room")
-        st.markdown("*Two sensors for accuracy*")
         
         c1, c2 = st.columns(2)
         
@@ -517,11 +522,10 @@ def main():
             if sensor1:
                 t = c_to_f(sensor1.get('temperature'))
                 st.metric("Temperature", f"{t:.1f}°F" if t else "N/A")
-                st.metric("Humidity", f"{sensor1.get('humidity', 0):.1f}%" if sensor1.get('humidity') else "N/A")
-                st.metric("Ethylene", f"{sensor1.get('ethylene', 0):.1f} ppm" if sensor1.get('ethylene') else "N/A")
+                st.metric("Humidity", f"{sensor1['humidity']:.1f}%" if sensor1.get('humidity') else "N/A")
+                st.metric("Ethylene", f"{sensor1['ethylene']:.1f} ppm" if sensor1.get('ethylene') else "N/A")
                 age = (datetime.now(timezone.utc) - sensor1['timestamp']).total_seconds()
-                color = '#3fb950' if age < 120 else '#d29922'
-                st.markdown(f"<span style='color:{color};'>{'🟢' if age < 120 else '🟡'} {int(age)}s ago</span>", unsafe_allow_html=True)
+                st.caption(f"{'🟢' if age < 120 else '🟡'} {int(age)}s ago")
             else:
                 st.warning("No data")
         
@@ -530,11 +534,10 @@ def main():
             if sensor2:
                 t = c_to_f(sensor2.get('temperature'))
                 st.metric("Temperature", f"{t:.1f}°F" if t else "N/A")
-                st.metric("Humidity", f"{sensor2.get('humidity', 0):.1f}%" if sensor2.get('humidity') else "N/A")
-                st.metric("Ethylene", f"{sensor2.get('ethylene', 0):.1f} ppm" if sensor2.get('ethylene') else "N/A")
+                st.metric("Humidity", f"{sensor2['humidity']:.1f}%" if sensor2.get('humidity') else "N/A")
+                st.metric("Ethylene", f"{sensor2['ethylene']:.1f} ppm" if sensor2.get('ethylene') else "N/A")
                 age = (datetime.now(timezone.utc) - sensor2['timestamp']).total_seconds()
-                color = '#3fb950' if age < 120 else '#d29922'
-                st.markdown(f"<span style='color:{color};'>{'🟢' if age < 120 else '🟡'} {int(age)}s ago</span>", unsafe_allow_html=True)
+                st.caption(f"{'🟢' if age < 120 else '🟡'} {int(age)}s ago")
             else:
                 st.warning("No data")
         
@@ -548,42 +551,113 @@ def main():
         with c3:
             st.metric("Avg Ethylene", f"{avg_eth:.1f} ppm" if avg_eth else "N/A")
     
-    # === TAB 3: TRENDS ===
+    # === TAB 3: TRENDS (Auto-load) ===
     with tab3:
-        st.markdown("### 📈 Trends")
+        st.markdown("### 📈 Sensor Trends")
         
-        # Only load Plotly when this tab is viewed
-        metric = st.selectbox("Metric", ['temperature', 'humidity', 'ethylene'], format_func=str.title)
+        metric = st.selectbox("Select Metric", ['temperature', 'humidity', 'ethylene'], format_func=str.title)
+        hours = st.slider("Time Range (hours)", 1, 24, 4)
         
-        if st.button("Load Trend Data"):
+        # Filter data for trends
+        trend_data = filter_by_hours(all_data, hours)
+        
+        if trend_data:
             import plotly.graph_objects as go
             import pandas as pd
             
-            data = fetch_trend_data(hours=4)
-            if data:
-                df = pd.DataFrame(data)
-                df['timestamp'] = pd.to_datetime(df['timestamp'], utc=True)
+            df = pd.DataFrame(trend_data)
+            df['timestamp'] = pd.to_datetime(df['timestamp'], utc=True)
+            df = df.sort_values('timestamp')
+            
+            fig = go.Figure()
+            
+            # Get unique stations
+            stations = df['station'].unique()
+            colors = ['#3fb950', '#58a6ff', '#f0883e', '#da3633']
+            
+            for idx, station in enumerate(stations):
+                sd = df[df['station'] == station]
+                y = sd[metric].copy()
                 
-                fig = go.Figure()
-                for station in df['station'].unique():
-                    sd = df[df['station'] == station].sort_values('timestamp')
-                    y = sd[metric]
-                    if metric == 'temperature':
-                        y = y.apply(c_to_f)
-                    
-                    name = "Sensor 1" if '1' in str(station) else "Sensor 2"
-                    fig.add_trace(go.Scatter(x=sd['timestamp'], y=y, mode='lines', name=name))
+                if metric == 'temperature':
+                    y = y.apply(c_to_f)
                 
-                fig.update_layout(
-                    paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
-                    xaxis=dict(gridcolor='#21262d'), yaxis=dict(gridcolor='#21262d'),
-                    height=400, margin=dict(l=40, r=20, t=20, b=40)
+                # Clean name
+                name = f"Sensor {idx+1}" if len(stations) <= 2 else str(station)
+                
+                fig.add_trace(go.Scatter(
+                    x=sd['timestamp'], 
+                    y=y, 
+                    mode='lines+markers',
+                    name=name,
+                    line=dict(color=colors[idx % len(colors)], width=2),
+                    marker=dict(size=4)
+                ))
+            
+            # Add optimal range shading
+            ranges = {'temperature': (60, 68), 'humidity': (90, 95), 'ethylene': (10, 100)}
+            if metric in ranges:
+                fig.add_hrect(
+                    y0=ranges[metric][0], y1=ranges[metric][1],
+                    fillcolor="rgba(35,134,54,0.15)", 
+                    line_width=0,
+                    annotation_text="Optimal", 
+                    annotation_position="top left"
                 )
-                st.plotly_chart(fig, use_container_width=True)
-            else:
-                st.info("No trend data available")
+            
+            units = {'temperature': '°F', 'humidity': '%', 'ethylene': 'ppm'}
+            
+            fig.update_layout(
+                paper_bgcolor='rgba(0,0,0,0)',
+                plot_bgcolor='rgba(0,0,0,0)',
+                xaxis=dict(
+                    gridcolor='#21262d',
+                    title="Time"
+                ),
+                yaxis=dict(
+                    title=f"{metric.title()} ({units[metric]})",
+                    gridcolor='#21262d'
+                ),
+                legend=dict(
+                    orientation="h",
+                    yanchor="bottom",
+                    y=1.02,
+                    xanchor="right",
+                    x=1
+                ),
+                height=400,
+                margin=dict(l=60, r=20, t=40, b=60),
+                font=dict(color='#c9d1d9')
+            )
+            
+            st.plotly_chart(fig, use_container_width=True)
+            
+            # Stats
+            st.markdown("#### 📊 Statistics")
+            c1, c2, c3, c4 = st.columns(4)
+            
+            vals = df[metric].dropna()
+            if metric == 'temperature':
+                vals = vals.apply(c_to_f)
+            
+            with c1:
+                st.metric("Min", f"{vals.min():.1f}{units[metric]}" if len(vals) else "N/A")
+            with c2:
+                st.metric("Max", f"{vals.max():.1f}{units[metric]}" if len(vals) else "N/A")
+            with c3:
+                st.metric("Average", f"{vals.mean():.1f}{units[metric]}" if len(vals) else "N/A")
+            with c4:
+                st.metric("Data Points", f"{len(vals)}")
+        
         else:
-            st.info("Click 'Load Trend Data' to view charts")
+            st.warning(f"No data available for the last {hours} hours")
+            st.info("💡 Make sure your sensors are sending data to Azure Table Storage")
+            
+            if debug_mode:
+                st.write(f"Total records in cache: {len(all_data)}")
+                if all_data:
+                    st.write(f"Data time range: {all_data[-1]['timestamp']} to {all_data[0]['timestamp']}")
+
 
 if __name__ == "__main__":
     main()
