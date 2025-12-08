@@ -2,7 +2,8 @@
 S&L Cold Storage - AI Avocado Ripening System
 Intelligent monitoring and recommendations for optimal fruit ripening
 
-Version: 3.2 - AI Ripening Edition (Clean UI)
+Version: 3.3 - Persistent Batch Storage Edition
+FIXED: Batch data now persists in Azure Table Storage (survives page refresh)
 """
 
 import streamlit as st
@@ -148,10 +149,9 @@ st.markdown("""
         border: 1px solid #f85149;
         border-radius: 12px;
         padding: 16px 20px;
-        margin: 12px 0;
+        margin-bottom: 12px;
         color: #ffffff;
         font-weight: 500;
-        font-family: 'Outfit', sans-serif;
         box-shadow: 0 4px 20px rgba(248, 81, 73, 0.3);
     }
     
@@ -160,10 +160,9 @@ st.markdown("""
         border: 1px solid #d29922;
         border-radius: 12px;
         padding: 16px 20px;
-        margin: 12px 0;
+        margin-bottom: 12px;
         color: #ffffff;
         font-weight: 500;
-        font-family: 'Outfit', sans-serif;
         box-shadow: 0 4px 20px rgba(210, 153, 34, 0.3);
     }
     
@@ -172,33 +171,19 @@ st.markdown("""
         border: 1px solid #3fb950;
         border-radius: 12px;
         padding: 16px 20px;
-        margin: 12px 0;
+        margin-bottom: 12px;
         color: #ffffff;
         font-weight: 500;
-        font-family: 'Outfit', sans-serif;
         box-shadow: 0 4px 20px rgba(63, 185, 80, 0.3);
-    }
-    
-    .alert-info {
-        background: linear-gradient(135deg, #1f6feb 0%, #1158c7 100%);
-        border: 1px solid #58a6ff;
-        border-radius: 12px;
-        padding: 16px 20px;
-        margin: 12px 0;
-        color: #ffffff;
-        font-weight: 500;
-        font-family: 'Outfit', sans-serif;
-        box-shadow: 0 4px 20px rgba(88, 166, 255, 0.3);
     }
     
     /* AI Panel */
     .ai-panel {
-        background: linear-gradient(135deg, #1a2332 0%, #0d1117 100%);
-        border: 2px solid #238636;
+        background: linear-gradient(145deg, #1a2332 0%, #161b22 100%);
+        border: 1px solid #30363d;
         border-radius: 16px;
         padding: 24px;
-        margin: 16px 0;
-        box-shadow: 0 8px 32px rgba(35, 134, 54, 0.2);
+        margin-bottom: 24px;
     }
     
     .ai-panel-header {
@@ -206,60 +191,69 @@ st.markdown("""
         align-items: center;
         gap: 12px;
         margin-bottom: 16px;
-        padding-bottom: 12px;
-        border-bottom: 1px solid #30363d;
     }
     
     .ai-panel-title {
-        color: #3fb950;
-        font-size: 1.3rem;
+        font-size: 1.4rem;
         font-weight: 600;
         font-family: 'Outfit', sans-serif;
-        margin: 0;
     }
     
     .ai-recommendation {
         background: #21262d;
-        border-left: 4px solid #238636;
-        border-radius: 0 8px 8px 0;
+        border-left: 4px solid #3fb950;
         padding: 12px 16px;
         margin: 8px 0;
+        border-radius: 0 8px 8px 0;
         color: #c9d1d9;
-        font-family: 'Outfit', sans-serif;
     }
     
     .ai-recommendation-action {
         background: #21262d;
-        border-left: 4px solid #f0883e;
-        border-radius: 0 8px 8px 0;
+        border-left: 4px solid #f85149;
         padding: 12px 16px;
         margin: 8px 0;
+        border-radius: 0 8px 8px 0;
         color: #c9d1d9;
-        font-family: 'Outfit', sans-serif;
     }
     
     /* Ripening Progress */
     .ripening-progress-container {
-        background: #21262d;
-        border-radius: 12px;
-        padding: 20px;
-        margin: 16px 0;
+        background: linear-gradient(145deg, #1a2332 0%, #161b22 100%);
         border: 1px solid #30363d;
+        border-radius: 16px;
+        padding: 24px;
+        margin-bottom: 24px;
     }
     
     .ripening-stage {
         display: inline-block;
-        padding: 6px 14px;
+        padding: 8px 20px;
         border-radius: 20px;
         font-weight: 600;
-        font-size: 0.85rem;
-        font-family: 'Outfit', sans-serif;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 1.1rem;
     }
     
-    .stage-green { background: #238636; color: white; }
-    .stage-breaking { background: #9e6a03; color: white; }
-    .stage-ripe { background: #f0883e; color: white; }
-    .stage-ready { background: #da3633; color: white; }
+    .stage-green {
+        background: linear-gradient(135deg, #238636 0%, #196c2e 100%);
+        color: #ffffff;
+    }
+    
+    .stage-breaking {
+        background: linear-gradient(135deg, #9e6a03 0%, #845306 100%);
+        color: #ffffff;
+    }
+    
+    .stage-ripe {
+        background: linear-gradient(135deg, #f0883e 0%, #db6d28 100%);
+        color: #ffffff;
+    }
+    
+    .stage-ready {
+        background: linear-gradient(135deg, #da3633 0%, #b62324 100%);
+        color: #ffffff;
+    }
     
     /* Checklist */
     .checklist-item {
@@ -270,86 +264,85 @@ st.markdown("""
         display: flex;
         align-items: center;
         gap: 12px;
-        border: 1px solid #30363d;
-        transition: all 0.3s ease;
+        color: #c9d1d9;
     }
     
-    .checklist-item:hover {
-        border-color: #238636;
-        background: #1a2332;
+    .checklist-check {
+        color: #3fb950;
+        font-size: 1.2rem;
+    }
+    
+    .checklist-pending {
+        color: #8b949e;
+        font-size: 1.2rem;
     }
     
     /* Batch Card */
     .batch-card {
-        background: linear-gradient(135deg, #1a2332 0%, #161b22 100%);
-        border: 1px solid #30363d;
+        background: linear-gradient(135deg, #238636 0%, #196c2e 100%);
+        border-radius: 12px;
+        padding: 16px;
+        margin: 12px 0;
+        color: #ffffff;
+    }
+    
+    .batch-header {
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin-bottom: 8px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    
+    .batch-detail {
+        font-size: 0.9rem;
+        margin: 4px 0;
+        color: rgba(255, 255, 255, 0.9);
+    }
+    
+    .batch-value {
+        font-family: 'JetBrains Mono', monospace;
+        font-weight: 500;
+    }
+    
+    /* Data Table */
+    .dataframe {
+        font-family: 'JetBrains Mono', monospace !important;
+        font-size: 0.9rem !important;
+    }
+    
+    /* Quick Reference */
+    .quick-ref-box {
+        background: #21262d;
         border-radius: 12px;
         padding: 20px;
         margin: 12px 0;
     }
     
-    .batch-header {
+    .quick-ref-title {
         color: #58a6ff;
-        font-size: 1.1rem;
         font-weight: 600;
         margin-bottom: 12px;
-        font-family: 'Outfit', sans-serif;
-    }
-    
-    .batch-detail {
-        color: #8b949e;
-        font-size: 0.9rem;
-        margin: 4px 0;
-        font-family: 'Outfit', sans-serif;
-    }
-    
-    .batch-value {
-        color: #c9d1d9;
-        font-weight: 500;
-    }
-    
-    /* Buttons */
-    .stButton > button {
-        background: linear-gradient(135deg, #238636 0%, #2ea043 100%);
-        color: white;
-        border: none;
-        border-radius: 8px;
-        padding: 10px 24px;
-        font-family: 'Outfit', sans-serif;
-        font-weight: 500;
-        transition: all 0.3s ease;
-    }
-    
-    .stButton > button:hover {
-        background: linear-gradient(135deg, #2ea043 0%, #3fb950 100%);
-        box-shadow: 0 4px 20px rgba(46, 160, 67, 0.4);
-    }
-    
-    /* Footer */
-    .custom-footer {
-        text-align: center;
-        padding: 24px;
-        color: #8b949e;
-        font-family: 'Outfit', sans-serif;
-        border-top: 1px solid #30363d;
-        margin-top: 40px;
-    }
-    
-    /* Select boxes and inputs */
-    .stSelectbox > div > div {
-        background-color: #21262d;
-        border-color: #30363d;
-    }
-    
-    .stTextInput > div > div > input {
-        background-color: #21262d;
-        border-color: #30363d;
-        color: #c9d1d9;
+        font-size: 1.1rem;
     }
     
     /* Progress bar */
     .stProgress > div > div > div > div {
         background: linear-gradient(90deg, #238636, #3fb950);
+    }
+    
+    /* Persistence indicator */
+    .persistence-badge {
+        background: #238636;
+        color: white;
+        padding: 4px 12px;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 500;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -389,6 +382,124 @@ AVOCADO_PARAMS = {
         'duration_minutes': 20,
     }
 }
+
+
+# ============================================================================
+# PERSISTENT BATCH STORAGE - STORES IN AZURE TABLE
+# ============================================================================
+class BatchManager:
+    """
+    Manages batch persistence in Azure Table Storage.
+    Batches survive page refreshes, server restarts, and work across multiple users.
+    """
+    
+    BATCH_TABLE_NAME = "batches"
+    ACTIVE_BATCH_ROW_KEY = "active"
+    
+    def __init__(self):
+        self.table_client = None
+        self._init_table_client()
+    
+    def _init_table_client(self):
+        """Initialize Azure Table client"""
+        try:
+            from azure.data.tables import TableServiceClient
+            connection_string = st.secrets['azure']['storage_connection_string']
+            table_service = TableServiceClient.from_connection_string(connection_string)
+            
+            # Create batches table if it doesn't exist
+            try:
+                table_service.create_table(self.BATCH_TABLE_NAME)
+            except Exception:
+                pass  # Table already exists
+            
+            self.table_client = table_service.get_table_client(self.BATCH_TABLE_NAME)
+        except Exception as e:
+            self.table_client = None
+    
+    def get_active_batch(self):
+        """
+        Retrieve the currently active batch from Azure Table Storage.
+        Returns None if no active batch exists.
+        """
+        if not self.table_client:
+            return None
+        
+        try:
+            entity = self.table_client.get_entity(
+                partition_key="batch",
+                row_key=self.ACTIVE_BATCH_ROW_KEY
+            )
+            
+            # Check if batch is still active
+            if entity.get('is_active', False):
+                return {
+                    'name': entity.get('name', 'Unnamed'),
+                    'season': entity.get('season', 'mid_season'),
+                    'start_time': datetime.fromisoformat(entity['start_time']),
+                    'is_active': True
+                }
+            return None
+            
+        except Exception:
+            return None
+    
+    def start_batch(self, name, season):
+        """
+        Start a new batch and persist it to Azure Table Storage.
+        """
+        if not self.table_client:
+            return False
+        
+        try:
+            start_time = datetime.now(timezone.utc)
+            entity = {
+                'PartitionKey': 'batch',
+                'RowKey': self.ACTIVE_BATCH_ROW_KEY,
+                'name': name or f"Batch-{start_time.strftime('%Y%m%d-%H%M')}",
+                'season': season,
+                'start_time': start_time.isoformat(),
+                'is_active': True
+            }
+            
+            # Upsert (update or insert) the batch
+            self.table_client.upsert_entity(entity)
+            return True
+            
+        except Exception as e:
+            st.error(f"Failed to start batch: {e}")
+            return False
+    
+    def end_batch(self):
+        """
+        End the currently active batch.
+        """
+        if not self.table_client:
+            return False
+        
+        try:
+            entity = self.table_client.get_entity(
+                partition_key="batch",
+                row_key=self.ACTIVE_BATCH_ROW_KEY
+            )
+            
+            # Mark as inactive and record end time
+            entity['is_active'] = False
+            entity['end_time'] = datetime.now(timezone.utc).isoformat()
+            
+            self.table_client.upsert_entity(entity)
+            return True
+            
+        except Exception:
+            return False
+    
+    def get_batch_history(self, limit=10):
+        """
+        Get historical batches (for reports).
+        """
+        # This would query a separate history table
+        # For now, return empty list
+        return []
 
 
 # ============================================================================
@@ -502,8 +613,19 @@ class AIRipeningEngine:
             })
             recommendations.append({
                 'type': 'action',
-                'message': f'🌡️ Lower temperature to {p["optimal_max"]}°F for optimal ripening',
+                'message': f'🌡️ Reduce temperature by {(temp_f - p["optimal_max"]):.1f}°F for optimal ripening',
                 'priority': 'high'
+            })
+        elif temp_f < p['critical_low']:
+            status = 'critical'
+            alerts.append({
+                'type': 'critical',
+                'message': f'🚨 CRITICAL: Temperature {temp_f:.1f}°F below {p["critical_low"]}°F - Chilling injury risk!'
+            })
+            recommendations.append({
+                'type': 'action',
+                'message': f'🌡️ IMMEDIATELY raise temperature above {p["critical_low"]}°F',
+                'priority': 'critical'
             })
         elif temp_f < p['optimal_min']:
             status = 'warning'
@@ -513,14 +635,8 @@ class AIRipeningEngine:
             })
             recommendations.append({
                 'type': 'action',
-                'message': f'🌡️ Increase temperature to {p["optimal_min"]}°F for faster ripening',
+                'message': f'🌡️ Increase temperature by {(p["optimal_min"] - temp_f):.1f}°F for faster ripening',
                 'priority': 'medium'
-            })
-        else:
-            recommendations.append({
-                'type': 'status',
-                'message': f'🌡️ Temperature {temp_f:.1f}°F is in optimal range ✓',
-                'priority': 'info'
             })
         
         return status, alerts, recommendations
@@ -538,11 +654,11 @@ class AIRipeningEngine:
             status = 'critical'
             alerts.append({
                 'type': 'critical',
-                'message': f'🚨 CRITICAL: Humidity {humidity:.1f}% is dangerously low!'
+                'message': f'🚨 CRITICAL: Humidity {humidity:.1f}% below {p["critical_low"]}% - Quality loss occurring!'
             })
             recommendations.append({
                 'type': 'action',
-                'message': f'💧 IMMEDIATELY activate humidifier - Target {p["optimal_min"]}-{p["optimal_max"]}%',
+                'message': '💧 IMMEDIATELY increase humidification - risk of weight loss and quality degradation',
                 'priority': 'critical'
             })
         elif humidity < p['warning_low']:
@@ -553,25 +669,19 @@ class AIRipeningEngine:
             })
             recommendations.append({
                 'type': 'action',
-                'message': f'💧 Increase humidity to {p["optimal_min"]}% to prevent quality loss',
+                'message': f'💧 Increase humidity by {(p["optimal_min"] - humidity):.1f}% to prevent moisture loss',
                 'priority': 'high'
             })
         elif humidity > p['optimal_max']:
             status = 'warning'
             alerts.append({
                 'type': 'warning',
-                'message': f'⚠️ Humidity {humidity:.1f}% is above optimal - Risk of mold'
+                'message': f'⚠️ Humidity {humidity:.1f}% is above optimal - condensation risk'
             })
             recommendations.append({
                 'type': 'action',
-                'message': f'💨 Reduce humidity to {p["optimal_max"]}% or below',
+                'message': '💧 Reduce humidity slightly to prevent condensation and mold risk',
                 'priority': 'medium'
-            })
-        else:
-            recommendations.append({
-                'type': 'status',
-                'message': f'💧 Humidity {humidity:.1f}% is in optimal range ✓',
-                'priority': 'info'
             })
         
         return status, alerts, recommendations
@@ -589,35 +699,29 @@ class AIRipeningEngine:
             status = 'warning'
             alerts.append({
                 'type': 'warning',
-                'message': f'⚠️ Ethylene {ethylene_ppm:.1f} ppm is very high'
+                'message': f'⚠️ Ethylene {ethylene_ppm:.1f} ppm is very high - may cause over-ripening'
             })
             recommendations.append({
                 'type': 'action',
-                'message': f'🌿 Consider reducing ethylene generation or ventilating',
-                'priority': 'medium'
+                'message': '🌬️ Ventilate room to reduce ethylene concentration',
+                'priority': 'high'
             })
         elif ethylene_ppm < p['warning_low']:
             status = 'warning'
             alerts.append({
                 'type': 'warning',
-                'message': f'⚠️ Ethylene {ethylene_ppm:.1f} ppm is too low for effective ripening'
+                'message': f'⚠️ Ethylene {ethylene_ppm:.1f} ppm is very low - slow ripening expected'
             })
             recommendations.append({
                 'type': 'action',
-                'message': f'🌿 Increase ethylene to {p["optimal_min"]}-{p["optimal_max"]} ppm',
-                'priority': 'high'
+                'message': '🍌 Consider adding ethylene generator or ripe fruit to increase levels',
+                'priority': 'medium'
             })
         elif ethylene_ppm < p['optimal_min']:
             recommendations.append({
-                'type': 'action',
-                'message': f'🌿 Ethylene {ethylene_ppm:.1f} ppm - Consider increasing to {p["optimal_min"]}+ ppm',
+                'type': 'info',
+                'message': f'🌿 Ethylene {ethylene_ppm:.1f} ppm is acceptable but below optimal ({p["optimal_min"]}-{p["optimal_max"]} ppm)',
                 'priority': 'low'
-            })
-        else:
-            recommendations.append({
-                'type': 'status',
-                'message': f'🌿 Ethylene {ethylene_ppm:.1f} ppm is in optimal range ✓',
-                'priority': 'info'
             })
         
         return status, alerts, recommendations
@@ -627,30 +731,29 @@ class AIRipeningEngine:
             return None
         
         hours_elapsed = (datetime.now(timezone.utc) - batch_start_time).total_seconds() / 3600
-        interval = self.params['ventilation']['interval_hours']
-        duration = self.params['ventilation']['duration_minutes']
+        vent_interval = self.params['ventilation']['interval_hours']
+        vent_duration = self.params['ventilation']['duration_minutes']
         
-        hours_since_last_vent = hours_elapsed % interval
+        hours_since_last_vent = hours_elapsed % vent_interval
         
-        if hours_since_last_vent < 0.5:
+        if hours_since_last_vent >= (vent_interval - 0.5):
             return {
                 'type': 'action',
-                'message': f'💨 VENTILATION TIME: Open vents for {duration} minutes to clear CO₂',
-                'priority': 'high'
+                'message': f'🌬️ Ventilation due soon - open doors for {vent_duration} minutes to prevent CO₂ buildup',
+                'priority': 'medium'
             }
-        elif hours_since_last_vent > interval - 1:
-            next_vent = interval - hours_since_last_vent
+        elif hours_since_last_vent < 0.5:
             return {
-                'type': 'status',
-                'message': f'💨 Next ventilation in {next_vent*60:.0f} minutes',
-                'priority': 'info'
+                'type': 'info',
+                'message': f'✅ Ventilation recently completed - next due in ~{vent_interval:.0f} hours',
+                'priority': 'low'
             }
         
         return None
 
 
 # ============================================================================
-# DATA FUNCTIONS
+# AZURE DATA FUNCTIONS
 # ============================================================================
 def celsius_to_fahrenheit(celsius):
     if celsius is None:
@@ -664,39 +767,49 @@ def get_azure_data():
         from azure.data.tables import TableServiceClient
         
         connection_string = st.secrets['azure']['storage_connection_string']
-        table_name = st.secrets['azure'].get('table_name', 'sensordata')
+        table_name = st.secrets['azure']['table_name']
         
-        service = TableServiceClient.from_connection_string(connection_string)
-        table_client = service.get_table_client(table_name)
+        table_service = TableServiceClient.from_connection_string(connection_string)
+        table_client = table_service.get_table_client(table_name)
         
         cutoff_time = datetime.now(timezone.utc) - timedelta(hours=4)
-        cutoff_str = cutoff_time.strftime('%Y-%m-%dT%H:%M:%SZ')
         
-        query_filter = f"Timestamp ge datetime'{cutoff_str}'"
-        
-        entities = table_client.query_entities(query_filter=query_filter)
-        
-        data = []
-        for entity in entities:
+        all_entities = []
+        for entity in table_client.list_entities():
             try:
-                ts = entity.get('Timestamp') or entity.get('timestamp')
-                if ts and not isinstance(ts, datetime):
-                    ts = pd.to_datetime(ts)
-                
-                data.append({
-                    'station': entity.get('PartitionKey', 'unknown'),
-                    'timestamp': ts,
-                    'temperature': float(entity['temperature']) if entity.get('temperature') else None,
-                    'humidity': float(entity['humidity']) if entity.get('humidity') else None,
-                    'ethylene': float(entity['ethylene']) if entity.get('ethylene') else None,
-                })
+                timestamp = entity.get('timestamp') or entity.get('Timestamp')
+                if timestamp:
+                    if isinstance(timestamp, str):
+                        timestamp = datetime.fromisoformat(timestamp.replace('Z', '+00:00'))
+                    if timestamp.tzinfo is None:
+                        timestamp = timestamp.replace(tzinfo=timezone.utc)
+                    
+                    if timestamp >= cutoff_time:
+                        temperature = entity.get('temperature')
+                        humidity = entity.get('humidity')
+                        ethylene = entity.get('ethylene')
+                        station = entity.get('station', entity.get('PartitionKey', 'unknown'))
+                        
+                        if temperature is not None:
+                            temperature = float(temperature)
+                        if humidity is not None:
+                            humidity = float(humidity)
+                        if ethylene is not None:
+                            ethylene = float(ethylene)
+                        
+                        all_entities.append({
+                            'station': station,
+                            'timestamp': timestamp,
+                            'temperature': temperature,
+                            'humidity': humidity,
+                            'ethylene': ethylene
+                        })
             except Exception:
                 continue
         
-        return data, "Connected", len(data)
+        status = "Connected to Azure"
+        return all_entities, status, len(all_entities)
         
-    except ImportError:
-        return [], "Azure SDK not installed", 0
     except KeyError:
         return [], "Azure not configured", 0
     except Exception as e:
@@ -851,124 +964,162 @@ def render_ripening_progress(analysis_result):
         if time_remaining is not None:
             days = int(time_remaining // 24)
             hours = int(time_remaining % 24)
-            st.markdown(f"""
-            <div style="text-align: center;">
-                <p style="color: #8b949e; margin-bottom: 8px;">Est. Time Remaining</p>
-                <p style="font-family: 'JetBrains Mono', monospace; font-size: 1.5rem; color: #58a6ff; margin: 0;">
-                    {days}d {hours}h
-                </p>
-            </div>
-            """, unsafe_allow_html=True)
+            time_str = f"{days}d {hours}h" if days > 0 else f"{hours}h"
+        else:
+            time_str = "N/A"
+        
+        st.markdown(f"""
+        <div style="text-align: center;">
+            <p style="color: #8b949e; margin-bottom: 8px;">Est. Remaining</p>
+            <p style="font-family: 'JetBrains Mono', monospace; font-size: 2rem; color: #58a6ff; margin: 0;">
+                {time_str}
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
     
     st.progress(progress / 100)
-    
-    st.markdown("""
-    <div style="display: flex; justify-content: space-between; margin-top: 16px; padding: 0 10px;">
-        <span style="color: #238636;">🟢 Green</span>
-        <span style="color: #9e6a03;">🟡 Breaking</span>
-        <span style="color: #f0883e;">🟠 Ripe</span>
-        <span style="color: #da3633;">🔴 Ready</span>
-    </div>
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
 
 
 def render_action_checklist():
     st.markdown("""
-    <div style="background: #161b22; border-radius: 12px; padding: 20px; border: 1px solid #30363d;">
-        <h3 style="color: #58a6ff; margin-bottom: 16px;">📋 Operator Checklist</h3>
+    <div class="quick-ref-box">
+        <div class="quick-ref-title">✅ Operator Checklist</div>
     """, unsafe_allow_html=True)
     
-    checklist = [
-        ("🌡️", "Check temp is 60-68°F"),
-        ("💧", "Verify humidity 90-95%"),
-        ("🌿", "Confirm ethylene 10-100 ppm"),
-        ("💨", "Vent room every 12 hours"),
-        ("👁️", "Inspect fruit color"),
-        ("📝", "Log any issues"),
+    checklist_items = [
+        ("Check temperature within range", True),
+        ("Verify humidity levels", True),
+        ("Monitor ethylene concentration", True),
+        ("Ventilate every 12 hours", False),
+        ("Inspect for quality issues", False),
     ]
     
-    for icon, text in checklist:
-        st.markdown(f"""
-        <div class="checklist-item">
-            <span style="font-size: 1.2rem;">{icon}</span>
-            <span style="color: #c9d1d9;">{text}</span>
-        </div>
-        """, unsafe_allow_html=True)
+    for item, checked in checklist_items:
+        icon = "✅" if checked else "⬜"
+        st.markdown(f'<div class="checklist-item"><span>{icon}</span> {item}</div>', unsafe_allow_html=True)
     
     st.markdown("</div>", unsafe_allow_html=True)
 
 
 def create_gauge_chart(value, title, min_val, max_val, optimal_min, optimal_max, unit):
-    if value is None:
-        color = "#8b949e"
-        value = 0
-    elif optimal_min <= value <= optimal_max:
-        color = "#3fb950"
-    else:
-        color = "#f85149"
-    
+    """Create a gauge chart with optimal range"""
     fig = go.Figure(go.Indicator(
         mode="gauge+number",
         value=value,
-        domain={'x': [0, 1], 'y': [0, 1]},
-        title={'text': title, 'font': {'size': 16, 'color': '#c9d1d9', 'family': 'Outfit'}},
-        number={'suffix': f" {unit}", 'font': {'size': 28, 'color': '#ffffff', 'family': 'JetBrains Mono'}},
+        title={'text': title, 'font': {'color': '#c9d1d9', 'size': 16, 'family': 'Outfit'}},
+        number={'suffix': unit, 'font': {'color': '#ffffff', 'size': 24, 'family': 'JetBrains Mono'}},
         gauge={
-            'axis': {'range': [min_val, max_val], 'tickcolor': '#8b949e'},
-            'bar': {'color': color, 'thickness': 0.75},
+            'axis': {
+                'range': [min_val, max_val], 
+                'tickcolor': '#8b949e',
+                'tickfont': {'color': '#8b949e'}
+            },
+            'bar': {'color': '#3fb950'},
             'bgcolor': '#21262d',
             'borderwidth': 2,
             'bordercolor': '#30363d',
             'steps': [
-                {'range': [min_val, optimal_min], 'color': '#1a2332'},
-                {'range': [optimal_min, optimal_max], 'color': '#0d2818'},
-                {'range': [optimal_max, max_val], 'color': '#2d1810'},
+                {'range': [min_val, optimal_min], 'color': '#9e6a03'},
+                {'range': [optimal_min, optimal_max], 'color': '#238636'},
+                {'range': [optimal_max, max_val], 'color': '#9e6a03'}
             ],
+            'threshold': {
+                'line': {'color': '#f85149', 'width': 4},
+                'thickness': 0.75,
+                'value': value
+            }
         }
     ))
     
     fig.update_layout(
         paper_bgcolor='rgba(0,0,0,0)',
         plot_bgcolor='rgba(0,0,0,0)',
-        font={'color': '#c9d1d9'},
-        height=220,
+        font={'color': '#c9d1d9', 'family': 'Outfit'},
+        height=200,
         margin=dict(l=20, r=20, t=40, b=20)
     )
     
     return fig
 
 
-def create_trend_chart(df, column, title, color, optimal_min=None, optimal_max=None):
+def create_time_series_chart(data, selected_metric):
+    """Create time series chart for selected metric"""
+    if not data:
+        return None
+    
+    df = pd.DataFrame(data)
+    df['timestamp'] = pd.to_datetime(df['timestamp'], utc=True)
+    
     fig = go.Figure()
     
-    if optimal_min is not None and optimal_max is not None:
+    colors = {'station1': '#3fb950', 'station2': '#58a6ff'}
+    names = {'station1': 'Room A', 'station2': 'Room B'}
+    
+    for station in df['station'].unique():
+        station_data = df[df['station'] == station].sort_values('timestamp')
+        
+        y_data = station_data[selected_metric]
+        if selected_metric == 'temperature':
+            y_data = y_data.apply(lambda x: celsius_to_fahrenheit(x) if x is not None else None)
+        
+        fig.add_trace(go.Scatter(
+            x=station_data['timestamp'],
+            y=y_data,
+            mode='lines',
+            name=names.get(station, station),
+            line=dict(color=colors.get(station, '#3fb950'), width=2),
+            fill='tozeroy',
+            fillcolor=f"rgba({int(colors.get(station, '#3fb950')[1:3], 16)}, {int(colors.get(station, '#3fb950')[3:5], 16)}, {int(colors.get(station, '#3fb950')[5:7], 16)}, 0.1)"
+        ))
+    
+    # Add optimal range
+    optimal_ranges = {
+        'temperature': (60, 68),
+        'humidity': (90, 95),
+        'ethylene': (10, 100)
+    }
+    
+    if selected_metric in optimal_ranges:
+        opt_min, opt_max = optimal_ranges[selected_metric]
         fig.add_hrect(
-            y0=optimal_min, y1=optimal_max,
-            fillcolor="rgba(63, 185, 80, 0.1)",
+            y0=opt_min, y1=opt_max,
+            fillcolor="rgba(35, 134, 54, 0.2)",
             line_width=0,
+            annotation_text="Optimal",
+            annotation_position="top right",
+            annotation=dict(font_color="#3fb950")
         )
     
-    fig.add_trace(go.Scatter(
-        x=df['timestamp'],
-        y=df[column],
-        mode='lines',
-        name=title,
-        line=dict(color=color, width=2),
-        fill='tozeroy',
-        fillcolor=f'rgba({int(color[1:3], 16)}, {int(color[3:5], 16)}, {int(color[5:7], 16)}, 0.1)'
-    ))
+    metric_labels = {
+        'temperature': 'Temperature (°F)',
+        'humidity': 'Humidity (%)',
+        'ethylene': 'Ethylene (ppm)'
+    }
     
     fig.update_layout(
-        title=dict(text=title, font=dict(size=16, color='#c9d1d9')),
         paper_bgcolor='rgba(0,0,0,0)',
-        plot_bgcolor='rgba(13, 17, 23, 0.8)',
-        font=dict(color='#8b949e'),
-        height=300,
-        margin=dict(l=40, r=20, t=50, b=40),
-        xaxis=dict(gridcolor='#21262d', showgrid=True),
-        yaxis=dict(gridcolor='#21262d', showgrid=True),
-        showlegend=False
+        plot_bgcolor='rgba(0,0,0,0)',
+        font={'color': '#c9d1d9', 'family': 'Outfit'},
+        xaxis=dict(
+            title='Time',
+            gridcolor='#21262d',
+            showgrid=True
+        ),
+        yaxis=dict(
+            title=metric_labels.get(selected_metric, selected_metric),
+            gridcolor='#21262d',
+            showgrid=True
+        ),
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=1.02,
+            xanchor="right",
+            x=1
+        ),
+        margin=dict(l=60, r=20, t=40, b=60),
+        height=400
     )
     
     return fig
@@ -978,15 +1129,10 @@ def create_trend_chart(df, column, title, color, optimal_min=None, optimal_max=N
 # MAIN APPLICATION
 # ============================================================================
 def main():
-    # Initialize session state
-    if 'batch_start_time' not in st.session_state:
-        st.session_state.batch_start_time = None
-    if 'batch_season' not in st.session_state:
-        st.session_state.batch_season = 'mid_season'
-    if 'batch_name' not in st.session_state:
-        st.session_state.batch_name = None
-    
     render_header()
+    
+    # Initialize batch manager for persistent storage
+    batch_manager = BatchManager()
     
     # Check for Azure secrets
     has_azure_secrets = False
@@ -995,6 +1141,9 @@ def main():
             has_azure_secrets = True
     except Exception:
         pass
+    
+    # Load active batch from persistent storage
+    active_batch = batch_manager.get_active_batch() if has_azure_secrets else None
     
     # Sidebar
     with st.sidebar:
@@ -1009,7 +1158,15 @@ def main():
         st.markdown("---")
         st.markdown("### 🥑 Batch Management")
         
-        batch_name = st.text_input("Batch Name", value=st.session_state.batch_name or "", placeholder="e.g., Batch-001")
+        # Show persistence badge if Azure is configured
+        if has_azure_secrets:
+            st.markdown("""
+            <div class="persistence-badge">
+                💾 Cloud Synced
+            </div>
+            """, unsafe_allow_html=True)
+        
+        batch_name = st.text_input("Batch Name", placeholder="e.g., Batch-001")
         
         season = st.selectbox(
             "Avocado Season",
@@ -1021,25 +1178,35 @@ def main():
         col1, col2 = st.columns(2)
         with col1:
             if st.button("▶️ Start", use_container_width=True):
-                st.session_state.batch_start_time = datetime.now(timezone.utc)
-                st.session_state.batch_season = season
-                st.session_state.batch_name = batch_name
-                st.success("Started!")
+                if has_azure_secrets:
+                    if batch_manager.start_batch(batch_name, season):
+                        st.success("Started!")
+                        st.rerun()  # Refresh to show updated batch
+                    else:
+                        st.error("Failed to start batch")
+                else:
+                    st.warning("Enable Azure to persist batches")
         
         with col2:
             if st.button("⏹️ End", use_container_width=True):
-                st.session_state.batch_start_time = None
-                st.session_state.batch_name = None
-                st.info("Ended")
+                if has_azure_secrets:
+                    if batch_manager.end_batch():
+                        st.info("Ended")
+                        st.rerun()  # Refresh to clear batch display
+                    else:
+                        st.error("Failed to end batch")
+                else:
+                    st.warning("Enable Azure to persist batches")
         
-        if st.session_state.batch_start_time:
-            elapsed = datetime.now(timezone.utc) - st.session_state.batch_start_time
+        # Show active batch info (from persistent storage)
+        if active_batch:
+            elapsed = datetime.now(timezone.utc) - active_batch['start_time']
             hours_elapsed = elapsed.total_seconds() / 3600
             st.markdown(f"""
             <div class="batch-card">
                 <div class="batch-header">📦 Active Batch</div>
-                <div class="batch-detail">Name: <span class="batch-value">{st.session_state.batch_name or 'Unnamed'}</span></div>
-                <div class="batch-detail">Season: <span class="batch-value">{st.session_state.batch_season.replace('_', ' ').title()}</span></div>
+                <div class="batch-detail">Name: <span class="batch-value">{active_batch['name']}</span></div>
+                <div class="batch-detail">Season: <span class="batch-value">{active_batch['season'].replace('_', ' ').title()}</span></div>
                 <div class="batch-detail">Elapsed: <span class="batch-value">{int(hours_elapsed)}h {int((hours_elapsed % 1) * 60)}m</span></div>
             </div>
             """, unsafe_allow_html=True)
@@ -1052,8 +1219,8 @@ def main():
         st.markdown("---")
         st.markdown("""
         <div style="text-align: center; color: #8b949e; font-size: 0.8rem;">
-            <p>S&L Cold Storage v3.2</p>
-            <p>AI Ripening System</p>
+            <p>S&L Cold Storage v3.3</p>
+            <p>Persistent Batch Storage</p>
         </div>
         """, unsafe_allow_html=True)
     
@@ -1099,14 +1266,14 @@ def main():
     if eths:
         ethylene = sum(eths) / len(eths)
     
-    # AI Analysis
+    # AI Analysis - use persistent batch info
     ai_engine = AIRipeningEngine()
     analysis = ai_engine.analyze_conditions(
         temperature_f=temp_f,
         humidity=humidity,
         ethylene_ppm=ethylene,
-        batch_start_time=st.session_state.batch_start_time,
-        season=st.session_state.batch_season
+        batch_start_time=active_batch['start_time'] if active_batch else None,
+        season=active_batch['season'] if active_batch else 'mid_season'
     )
     
     # Main tabs
@@ -1118,10 +1285,10 @@ def main():
         
         st.markdown("<br>", unsafe_allow_html=True)
         
-        if st.session_state.batch_start_time:
+        if active_batch:
             render_ripening_progress(analysis)
         else:
-            st.info("💡 Start a batch in the sidebar to track ripening progress")
+            st.info("💡 Start a batch in the sidebar to track ripening progress. Batches persist even after page refresh!")
         
         st.markdown("<br>", unsafe_allow_html=True)
         
@@ -1206,144 +1373,157 @@ def main():
     
     # ========== TAB 3: TRENDS ==========
     with tab3:
-        st.markdown("### 📈 Historical Trends")
+        st.markdown("### 📈 Sensor Trends")
         
-        if data:
-            df = pd.DataFrame(data)
-            df['timestamp'] = pd.to_datetime(df['timestamp'], utc=True)
-            
-            filter_col1, filter_col2 = st.columns(2)
-            
-            with filter_col1:
-                station_filter = st.selectbox(
-                    "Select Station",
-                    options=['All Stations', 'Station 1', 'Station 2']
-                )
-            
-            with filter_col2:
-                time_range = st.selectbox(
-                    "Time Range",
-                    options=['Last 1 Hour', 'Last 2 Hours', 'Last 4 Hours', 'All Data']
-                )
-            
-            # Apply station filter
-            if station_filter == 'Station 1':
-                df = df[df['station'].str.contains('station1', case=False, na=False)]
-            elif station_filter == 'Station 2':
-                df = df[df['station'].str.contains('station2', case=False, na=False)]
-            
-            # Apply time filter
-            if time_range != 'All Data':
-                hours = int(time_range.split()[1])
-                cutoff = datetime.now(timezone.utc) - timedelta(hours=hours)
-                cutoff = pd.Timestamp(cutoff)
-                df = df[df['timestamp'] > cutoff]
-            
-            df = df.sort_values('timestamp')
-            
-            if not df.empty:
-                # Temperature Chart
-                if df['temperature'].notna().any():
-                    df_temp = df.copy()
-                    df_temp['temperature_f'] = df_temp['temperature'].apply(
-                        lambda x: celsius_to_fahrenheit(x) if pd.notna(x) else None
-                    )
-                    fig = create_trend_chart(df_temp, 'temperature_f', 'Temperature (°F)', '#f0883e', 60, 68)
-                    st.plotly_chart(fig, use_container_width=True)
-                
-                # Humidity Chart
-                if df['humidity'].notna().any():
-                    fig = create_trend_chart(df, 'humidity', 'Humidity (%)', '#58a6ff', 90, 95)
-                    st.plotly_chart(fig, use_container_width=True)
-                
-                # Ethylene Chart
-                if df['ethylene'].notna().any():
-                    fig = create_trend_chart(df, 'ethylene', 'Ethylene (ppm)', '#3fb950', 10, 100)
-                    st.plotly_chart(fig, use_container_width=True)
-            else:
-                st.info("No data for selected filters")
+        metric_options = ['temperature', 'humidity', 'ethylene']
+        selected_metric = st.selectbox(
+            "Select Metric",
+            options=metric_options,
+            format_func=lambda x: x.title()
+        )
+        
+        fig = create_time_series_chart(data, selected_metric)
+        if fig:
+            st.plotly_chart(fig, use_container_width=True)
         else:
-            st.warning("No data available")
+            st.info("No data available for trends")
     
     # ========== TAB 4: REPORTS ==========
     with tab4:
         st.markdown("### 📋 Reports & Reference")
         
-        if st.session_state.batch_start_time:
+        if active_batch:
             st.markdown("#### 📦 Current Batch Summary")
             
-            elapsed = datetime.now(timezone.utc) - st.session_state.batch_start_time
+            elapsed = datetime.now(timezone.utc) - active_batch['start_time']
             hours_elapsed = elapsed.total_seconds() / 3600
             
             col1, col2, col3 = st.columns(3)
-            
             with col1:
-                st.metric("Batch Name", st.session_state.batch_name or "Unnamed")
-                st.metric("Season", st.session_state.batch_season.replace('_', ' ').title())
+                st.markdown(f"""
+                <div style="background: #21262d; padding: 20px; border-radius: 12px; text-align: center;">
+                    <p style="color: #8b949e; margin-bottom: 8px;">Batch Name</p>
+                    <p style="color: #ffffff; font-size: 1.5rem; font-family: 'JetBrains Mono', monospace; margin: 0;">
+                        {active_batch['name']}
+                    </p>
+                </div>
+                """, unsafe_allow_html=True)
             
             with col2:
-                st.metric("Time Elapsed", f"{int(hours_elapsed)}h {int((hours_elapsed % 1) * 60)}m")
-                st.metric("Progress", f"{analysis['progress_percent']:.0f}%")
+                st.markdown(f"""
+                <div style="background: #21262d; padding: 20px; border-radius: 12px; text-align: center;">
+                    <p style="color: #8b949e; margin-bottom: 8px;">Time Elapsed</p>
+                    <p style="color: #3fb950; font-size: 1.5rem; font-family: 'JetBrains Mono', monospace; margin: 0;">
+                        {int(hours_elapsed)}h {int((hours_elapsed % 1) * 60)}m
+                    </p>
+                </div>
+                """, unsafe_allow_html=True)
             
             with col3:
-                st.metric("Current Stage", analysis['ripening_stage'])
-                if analysis['time_remaining']:
+                st.markdown(f"""
+                <div style="background: #21262d; padding: 20px; border-radius: 12px; text-align: center;">
+                    <p style="color: #8b949e; margin-bottom: 8px;">Current Stage</p>
+                    <p style="color: #58a6ff; font-size: 1.5rem; font-family: 'JetBrains Mono', monospace; margin: 0;">
+                        {analysis['ripening_stage']}
+                    </p>
+                </div>
+                """, unsafe_allow_html=True)
+            
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                st.markdown(f"""
+                <div style="background: #21262d; padding: 20px; border-radius: 12px; text-align: center;">
+                    <p style="color: #8b949e; margin-bottom: 8px;">Season</p>
+                    <p style="color: #ffffff; font-size: 1.5rem; font-family: 'JetBrains Mono', monospace; margin: 0;">
+                        {active_batch['season'].replace('_', ' ').title()}
+                    </p>
+                </div>
+                """, unsafe_allow_html=True)
+            
+            with col2:
+                st.markdown(f"""
+                <div style="background: #21262d; padding: 20px; border-radius: 12px; text-align: center;">
+                    <p style="color: #8b949e; margin-bottom: 8px;">Progress</p>
+                    <p style="color: #3fb950; font-size: 1.5rem; font-family: 'JetBrains Mono', monospace; margin: 0;">
+                        {analysis['progress_percent']:.0f}%
+                    </p>
+                </div>
+                """, unsafe_allow_html=True)
+            
+            with col3:
+                if analysis['time_remaining'] is not None:
                     days = int(analysis['time_remaining'] // 24)
                     hours = int(analysis['time_remaining'] % 24)
-                    st.metric("Est. Remaining", f"{days}d {hours}h")
+                    time_str = f"{days}d {hours}h" if days > 0 else f"{hours}h"
+                else:
+                    time_str = "N/A"
+                
+                st.markdown(f"""
+                <div style="background: #21262d; padding: 20px; border-radius: 12px; text-align: center;">
+                    <p style="color: #8b949e; margin-bottom: 8px;">Est. Remaining</p>
+                    <p style="color: #58a6ff; font-size: 1.5rem; font-family: 'JetBrains Mono', monospace; margin: 0;">
+                        {time_str}
+                    </p>
+                </div>
+                """, unsafe_allow_html=True)
             
             st.markdown("---")
             
+            # Download data
             if data:
                 df = pd.DataFrame(data)
                 csv = df.to_csv(index=False)
                 st.download_button(
-                    label="📥 Download Data (CSV)",
-                    data=csv,
-                    file_name=f"ripening_data_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
-                    mime="text/csv"
+                    "📥 Download Data (CSV)",
+                    csv,
+                    f"batch_{active_batch['name']}_{datetime.now().strftime('%Y%m%d')}.csv",
+                    "text/csv"
                 )
         else:
             st.info("💡 Start a batch to generate reports")
         
         st.markdown("---")
-        st.markdown("#### 🥑 Avocado Ripening Quick Reference")
         
-        ref_col1, ref_col2 = st.columns(2)
+        # Quick Reference
+        st.markdown("### 🥑 Avocado Ripening Quick Reference")
         
-        with ref_col1:
+        col1, col2 = st.columns(2)
+        
+        with col1:
             st.markdown("""
-            **Optimal Conditions:**
-            - 🌡️ Temperature: 60-68°F (15-20°C)
-            - 💧 Humidity: 90-95% RH
-            - 🌿 Ethylene: 10-100 ppm
-            - 💨 Ventilate: Every 12 hours for 20 min
-            """)
+            <div class="quick-ref-box">
+                <div class="quick-ref-title">Optimal Conditions:</div>
+                <ul style="color: #c9d1d9; margin: 0; padding-left: 20px;">
+                    <li>🌡️ Temperature: 60-68°F (15-20°C)</li>
+                    <li>💧 Humidity: 90-95% RH</li>
+                    <li>🌿 Ethylene: 10-100 ppm</li>
+                    <li>💨 Ventilate: Every 12 hours for 20 min</li>
+                </ul>
+            </div>
+            """, unsafe_allow_html=True)
         
-        with ref_col2:
+        with col2:
             st.markdown("""
-            **Ripening Timeline:**
-            - 🌱 Early Season: 48h ethylene, 5-6 days total
-            - 🌿 Mid Season: 36h ethylene, 4-5 days total
-            - 🍂 Late Season: 24h ethylene, 3-4 days total
-            """)
+            <div class="quick-ref-box">
+                <div class="quick-ref-title">Ripening Timeline:</div>
+                <ul style="color: #c9d1d9; margin: 0; padding-left: 20px;">
+                    <li>🌱 Early Season: 48h ethylene, 5-6 days total</li>
+                    <li>🌿 Mid Season: 36h ethylene, 4-5 days total</li>
+                    <li>🍃 Late Season: 24h ethylene, 3-4 days total</li>
+                </ul>
+            </div>
+            """, unsafe_allow_html=True)
         
-        st.markdown("---")
         st.markdown("""
-        **⚠️ Critical Thresholds:**
-        - Temperature >86°F = Risk of flesh darkening
-        - Temperature <40°F = Chilling injury on unripe fruit
-        - Humidity <80% = Quality loss
-        - CO₂ >1% = Uneven ripening (ventilate!)
-        """)
-    
-    # Footer
-    st.markdown("""
-    <div class="custom-footer">
-        <p><strong>S&L Cold Storage</strong> - AI Ripening System v3.2</p>
-        <p style="font-size: 0.85rem;">Powered by Azure IoT</p>
-    </div>
-    """, unsafe_allow_html=True)
+        <div class="quick-ref-box">
+            <div class="quick-ref-title" style="color: #f85149;">⚠️ Critical Thresholds:</div>
+            <ul style="color: #c9d1d9; margin: 0; padding-left: 20px;">
+                <li>Temperature >86°F = Risk of flesh darkening</li>
+                <li>Temperature <40°F = Chilling injury on unripe fruit</li>
+                <li>Humidity <80% = Quality loss</li>
+            </ul>
+        </div>
+        """, unsafe_allow_html=True)
     
     # Auto-refresh
     if auto_refresh:
@@ -1353,4 +1533,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
