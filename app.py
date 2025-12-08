@@ -21,8 +21,41 @@ st.set_page_config(
     page_title="S&L Cold Storage - AI Ripening",
     page_icon="🥑",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="expanded",  # Always show sidebar
+    menu_items={
+        'Get Help': None,
+        'Report a bug': None,
+        'About': "S&L Cold Storage - AI Ripening System v3.3"
+    }
 )
+
+# Force sidebar to always be visible with custom CSS
+st.markdown("""
+<style>
+    /* FORCE SIDEBAR TO ALWAYS BE VISIBLE */
+    [data-testid="collapsedControl"] {
+        display: none !important;
+    }
+    
+    section[data-testid="stSidebar"] {
+        width: 320px !important;
+        min-width: 320px !important;
+    }
+    
+    section[data-testid="stSidebar"] > div {
+        width: 320px !important;
+    }
+    
+    /* Prevent sidebar collapse on mobile */
+    @media (max-width: 768px) {
+        section[data-testid="stSidebar"] {
+            width: 280px !important;
+            min-width: 280px !important;
+            transform: none !important;
+        }
+    }
+</style>
+""", unsafe_allow_html=True)
 
 # ============================================================================
 # CUSTOM CSS - Clean UI with Hidden Streamlit Elements
@@ -753,7 +786,7 @@ class AIRipeningEngine:
 
 
 # ============================================================================
-# AZURE DATA FUNCTIONS
+# AZURE DATA FUNCTIONS WITH CACHING
 # ============================================================================
 def celsius_to_fahrenheit(celsius):
     if celsius is None:
@@ -761,8 +794,9 @@ def celsius_to_fahrenheit(celsius):
     return (celsius * 9/5) + 32
 
 
+@st.cache_data(ttl=15)  # Cache data for 15 seconds to speed up loading
 def get_azure_data():
-    """Fetch data from Azure Table Storage"""
+    """Fetch data from Azure Table Storage with caching"""
     try:
         from azure.data.tables import TableServiceClient
         
@@ -1525,13 +1559,16 @@ def main():
         </div>
         """, unsafe_allow_html=True)
     
-    # Auto-refresh
+    # Auto-refresh using streamlit-autorefresh pattern
     if auto_refresh:
-        time.sleep(refresh_interval)
-        st.rerun()
+        # Use a simple HTML/JS based refresh that doesn't block
+        st.markdown(
+            f"""
+            <meta http-equiv="refresh" content="{refresh_interval}">
+            """,
+            unsafe_allow_html=True
+        )
 
 
 if __name__ == "__main__":
     main()
-
-
