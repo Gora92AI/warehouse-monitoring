@@ -2,7 +2,7 @@
 S&L Cold Storage - AI Avocado Ripening System
 Intelligent monitoring and recommendations for optimal fruit ripening
 
-Version: 3.1 - AI Ripening Edition (Fixed)
+Version: 3.2 - AI Ripening Edition (Clean UI)
 """
 
 import streamlit as st
@@ -24,20 +24,47 @@ st.set_page_config(
 )
 
 # ============================================================================
-# CUSTOM CSS - Professional Dark Theme with Avocado Green Accents
+# CUSTOM CSS - Clean UI with Hidden Streamlit Elements
 # ============================================================================
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
     
+    /* ===== HIDE STREAMLIT BRANDING & CONTROLS ===== */
+    #MainMenu {visibility: hidden !important;}
+    footer {visibility: hidden !important;}
+    header {visibility: hidden !important;}
+    
+    /* Hide GitHub icon, fork button, and viewer badge */
+    .css-1jc7ptx, .e1ewe7hr3, .viewerBadge_container__1QSob,
+    .styles_viewerBadge__1yB5_, .viewerBadge_link__1S137,
+    .viewerBadge_text__1JaDK, [data-testid="stToolbar"],
+    .stDeployButton, [data-testid="stDecoration"] {
+        display: none !important;
+        visibility: hidden !important;
+    }
+    
+    /* Hide top-right buttons */
+    .stApp > header {
+        display: none !important;
+    }
+    
+    /* Remove top padding since header is hidden */
+    .stApp > .main {
+        padding-top: 0 !important;
+    }
+    
+    .block-container {
+        padding-top: 1rem !important;
+    }
+    
+    /* ===== MAIN APP STYLING ===== */
     .stApp {
         background: linear-gradient(145deg, #0d1117 0%, #161b22 50%, #0d1117 100%);
         font-family: 'Outfit', sans-serif;
     }
     
-    #MainMenu {visibility: hidden;}
-    footer {visibility: hidden;}
-    
+    /* Metric Cards */
     div[data-testid="metric-container"] {
         background: linear-gradient(135deg, #1a2332 0%, #0d1117 100%);
         border: 1px solid #238636;
@@ -70,6 +97,7 @@ st.markdown("""
         font-family: 'JetBrains Mono', monospace !important;
     }
     
+    /* Headings */
     h1, h2, h3 {
         color: #58a6ff !important;
         font-family: 'Outfit', sans-serif !important;
@@ -80,6 +108,7 @@ st.markdown("""
     h2 { font-size: 1.8rem !important; }
     h3 { font-size: 1.4rem !important; }
     
+    /* Sidebar */
     section[data-testid="stSidebar"] {
         background: linear-gradient(180deg, #161b22 0%, #0d1117 100%);
         border-right: 1px solid #30363d;
@@ -89,6 +118,7 @@ st.markdown("""
         color: #c9d1d9;
     }
     
+    /* Tabs */
     .stTabs [data-baseweb="tab-list"] {
         gap: 8px;
         background: transparent;
@@ -112,6 +142,7 @@ st.markdown("""
         border-color: #238636;
     }
     
+    /* Alert Boxes */
     .alert-critical {
         background: linear-gradient(135deg, #da3633 0%, #b62324 100%);
         border: 1px solid #f85149;
@@ -160,6 +191,7 @@ st.markdown("""
         box-shadow: 0 4px 20px rgba(88, 166, 255, 0.3);
     }
     
+    /* AI Panel */
     .ai-panel {
         background: linear-gradient(135deg, #1a2332 0%, #0d1117 100%);
         border: 2px solid #238636;
@@ -206,6 +238,7 @@ st.markdown("""
         font-family: 'Outfit', sans-serif;
     }
     
+    /* Ripening Progress */
     .ripening-progress-container {
         background: #21262d;
         border-radius: 12px;
@@ -228,6 +261,7 @@ st.markdown("""
     .stage-ripe { background: #f0883e; color: white; }
     .stage-ready { background: #da3633; color: white; }
     
+    /* Checklist */
     .checklist-item {
         background: #21262d;
         border-radius: 8px;
@@ -245,15 +279,7 @@ st.markdown("""
         background: #1a2332;
     }
     
-    .footer {
-        text-align: center;
-        padding: 24px;
-        color: #8b949e;
-        font-family: 'Outfit', sans-serif;
-        border-top: 1px solid #30363d;
-        margin-top: 40px;
-    }
-    
+    /* Batch Card */
     .batch-card {
         background: linear-gradient(135deg, #1a2332 0%, #161b22 100%);
         border: 1px solid #30363d;
@@ -282,6 +308,7 @@ st.markdown("""
         font-weight: 500;
     }
     
+    /* Buttons */
     .stButton > button {
         background: linear-gradient(135deg, #238636 0%, #2ea043 100%);
         color: white;
@@ -296,6 +323,33 @@ st.markdown("""
     .stButton > button:hover {
         background: linear-gradient(135deg, #2ea043 0%, #3fb950 100%);
         box-shadow: 0 4px 20px rgba(46, 160, 67, 0.4);
+    }
+    
+    /* Footer */
+    .custom-footer {
+        text-align: center;
+        padding: 24px;
+        color: #8b949e;
+        font-family: 'Outfit', sans-serif;
+        border-top: 1px solid #30363d;
+        margin-top: 40px;
+    }
+    
+    /* Select boxes and inputs */
+    .stSelectbox > div > div {
+        background-color: #21262d;
+        border-color: #30363d;
+    }
+    
+    .stTextInput > div > div > input {
+        background-color: #21262d;
+        border-color: #30363d;
+        color: #c9d1d9;
+    }
+    
+    /* Progress bar */
+    .stProgress > div > div > div > div {
+        background: linear-gradient(90deg, #238636, #3fb950);
     }
 </style>
 """, unsafe_allow_html=True)
@@ -615,7 +669,6 @@ def get_azure_data():
         service = TableServiceClient.from_connection_string(connection_string)
         table_client = service.get_table_client(table_name)
         
-        # Query last 4 hours of data
         cutoff_time = datetime.now(timezone.utc) - timedelta(hours=4)
         cutoff_str = cutoff_time.strftime('%Y-%m-%dT%H:%M:%SZ')
         
@@ -626,7 +679,6 @@ def get_azure_data():
         data = []
         for entity in entities:
             try:
-                # Parse timestamp properly
                 ts = entity.get('Timestamp') or entity.get('timestamp')
                 if ts and not isinstance(ts, datetime):
                     ts = pd.to_datetime(ts)
@@ -641,14 +693,14 @@ def get_azure_data():
             except Exception:
                 continue
         
-        return data, "Connected to Azure", len(data)
+        return data, "Connected", len(data)
         
     except ImportError:
         return [], "Azure SDK not installed", 0
     except KeyError:
-        return [], "Azure secrets not configured", 0
+        return [], "Azure not configured", 0
     except Exception as e:
-        return [], f"Error: {str(e)[:50]}", 0
+        return [], f"Error: {str(e)[:30]}", 0
 
 
 def generate_demo_data():
@@ -660,16 +712,16 @@ def generate_demo_data():
     for i in range(480, 0, -1):
         timestamp = current_time - timedelta(seconds=i * 30)
         
-        # Station 1 - Full sensors
+        # Station 1 - Full sensors (Ripening Room A)
         data.append({
-            'station': 'station1-raspberry-pi',
+            'station': 'station1',
             'timestamp': timestamp,
             'temperature': 18.5 + random.uniform(-0.5, 0.5),
             'humidity': 92.0 + random.uniform(-2, 2),
             'ethylene': 45.0 + random.uniform(-10, 15)
         })
         
-        # Station 2 - Also full sensors now!
+        # Station 2 - Full sensors (Ripening Room B)
         data.append({
             'station': 'station2',
             'timestamp': timestamp,
@@ -709,14 +761,14 @@ def get_latest_readings(data):
 # ============================================================================
 def render_header():
     st.markdown("""
-    <div style='text-align: center; padding: 20px 0 30px 0;'>
-        <h1 style='font-size: 3rem; margin-bottom: 5px; 
+    <div style='text-align: center; padding: 10px 0 20px 0;'>
+        <h1 style='font-size: 2.8rem; margin-bottom: 5px; 
             background: linear-gradient(90deg, #3fb950, #58a6ff, #3fb950); 
             -webkit-background-clip: text; -webkit-text-fill-color: transparent;
             font-family: "Outfit", sans-serif; font-weight: 700;'>
             🥑 S&L Cold Storage
         </h1>
-        <p style='color: #8b949e; font-size: 1.3rem; margin-top: 0; font-family: "Outfit", sans-serif;'>
+        <p style='color: #8b949e; font-size: 1.2rem; margin-top: 0; font-family: "Outfit", sans-serif;'>
             AI-Powered Avocado Ripening System
         </p>
     </div>
@@ -951,7 +1003,7 @@ def main():
         if has_azure_secrets:
             demo_mode = st.checkbox("Demo Mode", value=False)
         else:
-            st.warning("⚠️ Azure not configured")
+            st.info("📡 Demo Mode Active")
             demo_mode = True
         
         st.markdown("---")
@@ -993,9 +1045,17 @@ def main():
             """, unsafe_allow_html=True)
         
         st.markdown("---")
-        st.markdown("### 🔄 Refresh")
-        auto_refresh = st.checkbox("Auto-refresh", value=True)
+        st.markdown("### 🔄 Auto Refresh")
+        auto_refresh = st.checkbox("Enable", value=True)
         refresh_interval = st.slider("Interval (sec)", 10, 60, 30)
+        
+        st.markdown("---")
+        st.markdown("""
+        <div style="text-align: center; color: #8b949e; font-size: 0.8rem;">
+            <p>S&L Cold Storage v3.2</p>
+            <p>AI Ripening System</p>
+        </div>
+        """, unsafe_allow_html=True)
     
     # Get data
     if demo_mode:
@@ -1052,7 +1112,7 @@ def main():
     # Main tabs
     tab1, tab2, tab3, tab4 = st.tabs(["🤖 AI Dashboard", "📊 Live Sensors", "📈 Trends", "📋 Reports"])
     
-    # TAB 1: AI DASHBOARD
+    # ========== TAB 1: AI DASHBOARD ==========
     with tab1:
         render_ai_panel(analysis)
         
@@ -1087,22 +1147,17 @@ def main():
         with col2:
             render_action_checklist()
     
-    # TAB 2: LIVE SENSORS
+    # ========== TAB 2: LIVE SENSORS ==========
     with tab2:
         st.markdown("### 📡 Live Sensor Readings")
         
-        status_cols = st.columns(4)
+        status_cols = st.columns(3)
         with status_cols[0]:
             st.markdown(f"**Status:** {connection_status}")
         with status_cols[1]:
             st.markdown(f"**Records:** {record_count}")
         with status_cols[2]:
-            if latest_station1:
-                ts = latest_station1.get('timestamp')
-                if ts:
-                    st.markdown(f"**Last Update:** {pd.to_datetime(ts).strftime('%H:%M:%S')}")
-        with status_cols[3]:
-            if st.button("🔄 Refresh"):
+            if st.button("🔄 Refresh Now"):
                 st.rerun()
         
         st.markdown("---")
@@ -1149,7 +1204,7 @@ def main():
         else:
             st.warning("No data from Station 2")
     
-    # TAB 3: TRENDS
+    # ========== TAB 3: TRENDS ==========
     with tab3:
         st.markdown("### 📈 Historical Trends")
         
@@ -1157,32 +1212,37 @@ def main():
             df = pd.DataFrame(data)
             df['timestamp'] = pd.to_datetime(df['timestamp'], utc=True)
             
-            station_filter = st.selectbox(
-                "Select Station",
-                options=['All', 'Station 1', 'Station 2']
-            )
+            filter_col1, filter_col2 = st.columns(2)
             
+            with filter_col1:
+                station_filter = st.selectbox(
+                    "Select Station",
+                    options=['All Stations', 'Station 1', 'Station 2']
+                )
+            
+            with filter_col2:
+                time_range = st.selectbox(
+                    "Time Range",
+                    options=['Last 1 Hour', 'Last 2 Hours', 'Last 4 Hours', 'All Data']
+                )
+            
+            # Apply station filter
             if station_filter == 'Station 1':
                 df = df[df['station'].str.contains('station1', case=False, na=False)]
             elif station_filter == 'Station 2':
                 df = df[df['station'].str.contains('station2', case=False, na=False)]
             
-            time_range = st.selectbox(
-                "Time Range",
-                options=['Last 1 Hour', 'Last 2 Hours', 'Last 4 Hours', 'All Data']
-            )
-            
+            # Apply time filter
             if time_range != 'All Data':
                 hours = int(time_range.split()[1])
                 cutoff = datetime.now(timezone.utc) - timedelta(hours=hours)
-                # Convert cutoff to pandas timestamp for comparison
                 cutoff = pd.Timestamp(cutoff)
                 df = df[df['timestamp'] > cutoff]
             
             df = df.sort_values('timestamp')
             
             if not df.empty:
-                # Temperature
+                # Temperature Chart
                 if df['temperature'].notna().any():
                     df_temp = df.copy()
                     df_temp['temperature_f'] = df_temp['temperature'].apply(
@@ -1191,12 +1251,12 @@ def main():
                     fig = create_trend_chart(df_temp, 'temperature_f', 'Temperature (°F)', '#f0883e', 60, 68)
                     st.plotly_chart(fig, use_container_width=True)
                 
-                # Humidity
+                # Humidity Chart
                 if df['humidity'].notna().any():
                     fig = create_trend_chart(df, 'humidity', 'Humidity (%)', '#58a6ff', 90, 95)
                     st.plotly_chart(fig, use_container_width=True)
                 
-                # Ethylene
+                # Ethylene Chart
                 if df['ethylene'].notna().any():
                     fig = create_trend_chart(df, 'ethylene', 'Ethylene (ppm)', '#3fb950', 10, 100)
                     st.plotly_chart(fig, use_container_width=True)
@@ -1205,12 +1265,12 @@ def main():
         else:
             st.warning("No data available")
     
-    # TAB 4: REPORTS
+    # ========== TAB 4: REPORTS ==========
     with tab4:
         st.markdown("### 📋 Reports & Reference")
         
         if st.session_state.batch_start_time:
-            st.markdown("#### Current Batch Summary")
+            st.markdown("#### 📦 Current Batch Summary")
             
             elapsed = datetime.now(timezone.utc) - st.session_state.batch_start_time
             hours_elapsed = elapsed.total_seconds() / 3600
@@ -1247,32 +1307,41 @@ def main():
             st.info("💡 Start a batch to generate reports")
         
         st.markdown("---")
-        st.markdown("#### 🥑 Avocado Ripening Reference")
+        st.markdown("#### 🥑 Avocado Ripening Quick Reference")
         
         ref_col1, ref_col2 = st.columns(2)
         
         with ref_col1:
             st.markdown("""
             **Optimal Conditions:**
-            - Temperature: 60-68°F (15-20°C)
-            - Humidity: 90-95% RH
-            - Ethylene: 10-100 ppm
-            - Ventilate: Every 12 hours for 20 min
+            - 🌡️ Temperature: 60-68°F (15-20°C)
+            - 💧 Humidity: 90-95% RH
+            - 🌿 Ethylene: 10-100 ppm
+            - 💨 Ventilate: Every 12 hours for 20 min
             """)
         
         with ref_col2:
             st.markdown("""
             **Ripening Timeline:**
-            - Early Season: 48h ethylene, 5-6 days
-            - Mid Season: 36h ethylene, 4-5 days
-            - Late Season: 24h ethylene, 3-4 days
+            - 🌱 Early Season: 48h ethylene, 5-6 days total
+            - 🌿 Mid Season: 36h ethylene, 4-5 days total
+            - 🍂 Late Season: 24h ethylene, 3-4 days total
             """)
+        
+        st.markdown("---")
+        st.markdown("""
+        **⚠️ Critical Thresholds:**
+        - Temperature >86°F = Risk of flesh darkening
+        - Temperature <40°F = Chilling injury on unripe fruit
+        - Humidity <80% = Quality loss
+        - CO₂ >1% = Uneven ripening (ventilate!)
+        """)
     
     # Footer
     st.markdown("""
-    <div class="footer">
-        <p><strong>S&L Cold Storage</strong> - AI Ripening System v3.1</p>
-        <p style="font-size: 0.85rem;">Powered by Azure IoT | Built with Streamlit</p>
+    <div class="custom-footer">
+        <p><strong>S&L Cold Storage</strong> - AI Ripening System v3.2</p>
+        <p style="font-size: 0.85rem;">Powered by Azure IoT</p>
     </div>
     """, unsafe_allow_html=True)
     
@@ -1284,3 +1353,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
