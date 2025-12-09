@@ -34,34 +34,75 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# Compact CSS - optimized for performance
+# Compact CSS - optimized for performance, supports light/dark mode
 st.markdown("""
 <style>
-    .stApp { background: linear-gradient(135deg, #0a1628 0%, #1a2d4a 100%); }
+    /* Force dark theme background for consistent branding */
+    .stApp { 
+        background: linear-gradient(135deg, #0a1628 0%, #1a2d4a 100%) !important; 
+    }
+    
+    /* Metric containers */
     div[data-testid="metric-container"] {
-        background: linear-gradient(135deg, #1e3a5f 0%, #0d2137 100%);
+        background: linear-gradient(135deg, #1e3a5f 0%, #0d2137 100%) !important;
         border: 1px solid #00b4d8; border-radius: 10px; padding: 15px;
     }
     div[data-testid="metric-container"] label { color: #a0a0a0 !important; }
     div[data-testid="metric-container"] div[data-testid="stMetricValue"] { color: #fff !important; }
+    
+    /* Headers */
     h1, h2, h3 { color: #00b4d8 !important; }
-    .status-card { background: rgba(30,58,95,0.7); border-radius: 12px; padding: 20px; 
-                   margin: 10px 0; border-left: 4px solid #00b4d8; }
-    .alert-critical { background: linear-gradient(135deg, #ff4444, #cc0000); 
-                      border-radius: 10px; padding: 15px; color: white; margin: 5px 0; }
-    .alert-warning { background: linear-gradient(135deg, #ffaa00, #cc8800); 
-                     border-radius: 10px; padding: 15px; color: white; margin: 5px 0; }
-    .alert-success { background: linear-gradient(135deg, #00cc66, #009944); 
-                     border-radius: 10px; padding: 15px; color: white; margin: 5px 0; }
-    .ripening-stage { font-size: 1.5rem; font-weight: bold; text-align: center; 
-                      padding: 15px; border-radius: 10px; margin: 10px 0; }
-    .stage-1 { background: linear-gradient(135deg, #2d5016, #1a3009); color: #90EE90; }
-    .stage-2 { background: linear-gradient(135deg, #4a7c23, #2d5016); color: #ADFF2F; }
-    .stage-3 { background: linear-gradient(135deg, #7cb342, #558b2f); color: #FFFF00; }
-    .stage-4 { background: linear-gradient(135deg, #c0a000, #8b7500); color: #FFD700; }
-    .stage-5 { background: linear-gradient(135deg, #1b5e20, #0d3010); color: #00ff00; }
-    .recommendation { background: rgba(0,180,216,0.2); border-left: 4px solid #00b4d8;
-                      padding: 15px; margin: 10px 0; border-radius: 0 10px 10px 0; }
+    
+    /* Force white text for status bar */
+    .status-bar { 
+        background: rgba(30,58,95,0.8) !important; 
+        border-radius: 10px; padding: 12px; margin-bottom: 20px; 
+        text-align: center; border: 1px solid #00b4d8;
+        color: #ffffff !important;
+    }
+    .status-bar strong { color: #ffffff !important; }
+    
+    .status-card { 
+        background: rgba(30,58,95,0.7) !important; 
+        border-radius: 12px; padding: 20px; 
+        margin: 10px 0; border-left: 4px solid #00b4d8;
+        color: #ffffff !important;
+    }
+    
+    /* Alert styles */
+    .alert-critical { 
+        background: linear-gradient(135deg, #ff4444, #cc0000) !important; 
+        border-radius: 10px; padding: 15px; color: #ffffff !important; margin: 5px 0; 
+    }
+    .alert-warning { 
+        background: linear-gradient(135deg, #ffaa00, #cc8800) !important; 
+        border-radius: 10px; padding: 15px; color: #ffffff !important; margin: 5px 0; 
+    }
+    .alert-success { 
+        background: linear-gradient(135deg, #00cc66, #009944) !important; 
+        border-radius: 10px; padding: 15px; color: #ffffff !important; margin: 5px 0; 
+    }
+    
+    /* Ripening stages */
+    .ripening-stage { 
+        font-size: 1.5rem; font-weight: bold; text-align: center; 
+        padding: 15px; border-radius: 10px; margin: 10px 0; 
+    }
+    .stage-1 { background: linear-gradient(135deg, #2d5016, #1a3009) !important; color: #90EE90 !important; }
+    .stage-2 { background: linear-gradient(135deg, #4a7c23, #2d5016) !important; color: #ADFF2F !important; }
+    .stage-3 { background: linear-gradient(135deg, #7cb342, #558b2f) !important; color: #FFFF00 !important; }
+    .stage-4 { background: linear-gradient(135deg, #c0a000, #8b7500) !important; color: #FFD700 !important; }
+    .stage-5 { background: linear-gradient(135deg, #1b5e20, #0d3010) !important; color: #00ff00 !important; }
+    
+    /* Recommendations */
+    .recommendation { 
+        background: rgba(0,180,216,0.2) !important; 
+        border-left: 4px solid #00b4d8;
+        padding: 15px; margin: 10px 0; border-radius: 0 10px 10px 0;
+        color: #ffffff !important;
+    }
+    
+    /* Hide default status widget */
     div[data-testid="stStatusWidget"] { display: none; }
 </style>
 """, unsafe_allow_html=True)
