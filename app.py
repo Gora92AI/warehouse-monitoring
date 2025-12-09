@@ -401,20 +401,22 @@ def create_gauge(value: float, title: str, min_val: float, max_val: float,
         mode="gauge+number",
         value=value,
         number={
-            'suffix': unit, 
-            'font': {'size': 24, 'color': '#fff'},
-            'valueformat': '.1f'  # Always show 1 decimal place for stability
+            'suffix': f" {unit}" if unit else "", 
+            'font': {'size': 22, 'color': '#fff'},
+            'valueformat': '.1f'
         },
-        title={'text': title, 'font': {'size': 14, 'color': '#90e0ef'}},
+        title={'text': title, 'font': {'size': 13, 'color': '#90e0ef'}},
+        domain={'x': [0.1, 0.9], 'y': [0.15, 1]},  # Push gauge up, leave room for number
         gauge={
             'axis': {
                 'range': [min_val, max_val], 
                 'tickcolor': '#fff',
-                'tickfont': {'size': 10}
+                'tickfont': {'size': 9},
+                'tickwidth': 1
             },
-            'bar': {'color': color},
+            'bar': {'color': color, 'thickness': 0.75},
             'bgcolor': '#0a1628',
-            'borderwidth': 2,
+            'borderwidth': 1,
             'bordercolor': '#1e3a5f',
             'steps': steps
         }
@@ -423,8 +425,8 @@ def create_gauge(value: float, title: str, min_val: float, max_val: float,
     fig.update_layout(
         paper_bgcolor='rgba(0,0,0,0)',
         plot_bgcolor='rgba(0,0,0,0)',
-        height=200,  # Increased height for number display
-        margin=dict(l=20, r=20, t=35, b=25)  # More bottom margin for numbers
+        height=220,
+        margin=dict(l=15, r=15, t=30, b=15)
     )
     
     return fig
