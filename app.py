@@ -374,12 +374,12 @@ def hex_to_rgba(hex_color: str, alpha: float = 0.2) -> str:
 def create_gauge(value: float, title: str, min_val: float, max_val: float, 
                  ranges: List[Tuple[float, float, str]], unit: str = "") -> go.Figure:
     """
-    Create an efficient gauge chart with stable number display.
+    Create an efficient gauge chart with static centered number.
     """
     if value is None:
         value = 0
     
-    # Round value to 1 decimal place to prevent jumping numbers
+    # Round value to 1 decimal place
     value = round(value, 1)
     
     # Determine color based on ranges
@@ -397,16 +397,11 @@ def create_gauge(value: float, title: str, min_val: float, max_val: float,
             'color': hex_to_rgba(r[2], 0.2)
         })
     
+    # Create gauge WITHOUT number (we'll add it as annotation)
     fig = go.Figure(go.Indicator(
-        mode="gauge+number",
+        mode="gauge",  # No number here
         value=value,
-        number={
-            'suffix': f" {unit}" if unit else "", 
-            'font': {'size': 22, 'color': '#fff'},
-            'valueformat': '.1f'
-        },
         title={'text': title, 'font': {'size': 13, 'color': '#90e0ef'}},
-        domain={'x': [0.1, 0.9], 'y': [0.15, 1]},  # Push gauge up, leave room for number
         gauge={
             'axis': {
                 'range': [min_val, max_val], 
@@ -422,11 +417,24 @@ def create_gauge(value: float, title: str, min_val: float, max_val: float,
         }
     ))
     
+    # Add number as static centered annotation
+    fig.add_annotation(
+        text=f"<b>{value:.1f}</b> {unit}",
+        x=0.5,
+        y=0.25,
+        xref="paper",
+        yref="paper",
+        showarrow=False,
+        font=dict(size=20, color="#ffffff"),
+        xanchor="center",
+        yanchor="middle"
+    )
+    
     fig.update_layout(
         paper_bgcolor='rgba(0,0,0,0)',
         plot_bgcolor='rgba(0,0,0,0)',
-        height=220,
-        margin=dict(l=15, r=15, t=30, b=15)
+        height=200,
+        margin=dict(l=15, r=15, t=30, b=10)
     )
     
     return fig
