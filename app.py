@@ -18,6 +18,10 @@ from datetime import datetime, timedelta, timezone
 from dataclasses import dataclass
 from typing import Optional, List, Dict, Tuple
 import time
+from zoneinfo import ZoneInfo
+
+# Timezone configuration
+NY_TZ = ZoneInfo("America/New_York")
 
 # ============================================================================
 # CONFIGURATION
@@ -577,7 +581,7 @@ def main():
     
     # Status bar
     status_color = "🟢" if status == "Connected" else "🟡" if "Demo" in status else "🔴"
-    update_time = datetime.now().strftime("%H:%M:%S")
+    update_time = datetime.now(NY_TZ).strftime("%H:%M:%S")
     
     st.markdown(f"""
     <div style='background: rgba(30,58,95,0.6); border-radius: 10px; padding: 12px; margin-bottom: 20px; 
