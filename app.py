@@ -362,6 +362,15 @@ def get_latest_readings(data: List[Dict]) -> Dict[str, SensorReading]:
 # VISUALIZATION COMPONENTS
 # ============================================================================
 
+def hex_to_rgba(hex_color: str, alpha: float = 0.2) -> str:
+    """Convert hex color to rgba format for Plotly"""
+    hex_color = hex_color.lstrip('#')
+    r = int(hex_color[0:2], 16)
+    g = int(hex_color[2:4], 16)
+    b = int(hex_color[4:6], 16)
+    return f"rgba({r},{g},{b},{alpha})"
+
+
 def create_gauge(value: float, title: str, min_val: float, max_val: float, 
                  ranges: List[Tuple[float, float, str]], unit: str = "") -> go.Figure:
     """
@@ -377,6 +386,14 @@ def create_gauge(value: float, title: str, min_val: float, max_val: float,
             color = c
             break
     
+    # Build steps with proper rgba colors
+    steps = []
+    for r in ranges:
+        steps.append({
+            'range': [r[0], r[1]], 
+            'color': hex_to_rgba(r[2], 0.2)
+        })
+    
     fig = go.Figure(go.Indicator(
         mode="gauge+number",
         value=value,
@@ -388,7 +405,7 @@ def create_gauge(value: float, title: str, min_val: float, max_val: float,
             'bgcolor': '#0a1628',
             'borderwidth': 2,
             'bordercolor': '#1e3a5f',
-            'steps': [{'range': [r[0], r[1]], 'color': f"{r[2]}33"} for r in ranges]
+            'steps': steps
         }
     ))
     
