@@ -374,10 +374,13 @@ def hex_to_rgba(hex_color: str, alpha: float = 0.2) -> str:
 def create_gauge(value: float, title: str, min_val: float, max_val: float, 
                  ranges: List[Tuple[float, float, str]], unit: str = "") -> go.Figure:
     """
-    Create an efficient gauge chart.
+    Create an efficient gauge chart with stable number display.
     """
     if value is None:
         value = 0
+    
+    # Round value to 1 decimal place to prevent jumping numbers
+    value = round(value, 1)
     
     # Determine color based on ranges
     color = "#00ff88"
@@ -397,10 +400,18 @@ def create_gauge(value: float, title: str, min_val: float, max_val: float,
     fig = go.Figure(go.Indicator(
         mode="gauge+number",
         value=value,
-        number={'suffix': unit, 'font': {'size': 28, 'color': '#fff'}},
+        number={
+            'suffix': unit, 
+            'font': {'size': 24, 'color': '#fff'},
+            'valueformat': '.1f'  # Always show 1 decimal place for stability
+        },
         title={'text': title, 'font': {'size': 14, 'color': '#90e0ef'}},
         gauge={
-            'axis': {'range': [min_val, max_val], 'tickcolor': '#fff'},
+            'axis': {
+                'range': [min_val, max_val], 
+                'tickcolor': '#fff',
+                'tickfont': {'size': 10}
+            },
             'bar': {'color': color},
             'bgcolor': '#0a1628',
             'borderwidth': 2,
@@ -412,8 +423,8 @@ def create_gauge(value: float, title: str, min_val: float, max_val: float,
     fig.update_layout(
         paper_bgcolor='rgba(0,0,0,0)',
         plot_bgcolor='rgba(0,0,0,0)',
-        height=180,
-        margin=dict(l=20, r=20, t=40, b=10)
+        height=200,  # Increased height for number display
+        margin=dict(l=20, r=20, t=35, b=25)  # More bottom margin for numbers
     )
     
     return fig
